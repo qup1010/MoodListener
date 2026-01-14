@@ -4,6 +4,10 @@ import App from './App';
 import './index.css';
 import { Capacitor } from '@capacitor/core';
 import { initWebStorage } from './src/storage/webStorage';
+import { initTheme } from './theme';
+
+// 立即初始化主题，防止 React 渲染前的白色闪屏
+initTheme();
 
 // 初始化存储
 if (Capacitor.isNativePlatform()) {

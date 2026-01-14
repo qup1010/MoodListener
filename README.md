@@ -91,9 +91,10 @@ npx cap open android
 
 ## Roadmap
 
-- [ ] 导出数据（JSON/CSV）
+- [ ] 导出其他格式心情数据
 - [ ] 情绪趋势图表优化
 - [ ] 提醒通知完善
+- [ ] 导入心情数据
 
 
 ## License
