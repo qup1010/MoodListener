@@ -1,0 +1,55 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Backend 
+backend/
+
+# Android
+android/.gradle
+android/app/build
+android/build
+android/captures
+android/*.iml
+android/.idea
+android/local.properties
+
+# iOS
+ios/App/Pods
+ios/DerivedData
+
+# Capacitor
+.capacitor
+
+# Python 临时脚本
+__pycache__
+*.pyc
+download_fonts.py
+generate_css.py
+font_styles.css
+
+# 环境变量
+.env
+.env.local
+.env.*.local
