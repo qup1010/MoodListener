@@ -267,7 +267,7 @@ export const Settings: React.FC = () => {
                 <span className="font-semibold text-gray-900 dark:text-white">软件信息</span>
               </div>
               <div className="flex items-center gap-1 text-gray-400">
-                <span className="text-sm font-medium">版本 1.2.0</span>
+                <span className="text-sm font-medium">版本 1.0.0</span>
                 <Icon name="chevron_right" size={20} />
               </div>
             </button>
