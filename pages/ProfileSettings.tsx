@@ -34,10 +34,17 @@ export const ProfileSettings: React.FC = () => {
     const loadProfile = async () => {
         try {
             const profile = await fetchProfile();
-            setUsername(profile.username);
-            setAvatarUrl(profile.avatar_url || AVATAR_OPTIONS[0]);
+            setUsername(profile.username || '朋友');
+            // 确保头像 URL 有效，否则使用默认头像
+            const savedAvatar = profile.avatar_url;
+            if (savedAvatar && (savedAvatar.startsWith('http') || savedAvatar.startsWith('data:'))) {
+                setAvatarUrl(savedAvatar);
+            } else {
+                setAvatarUrl(AVATAR_OPTIONS[0]);
+            }
         } catch (error) {
             console.error('加载资料失败:', error);
+            setAvatarUrl(AVATAR_OPTIONS[0]);
         } finally {
             setLoading(false);
         }

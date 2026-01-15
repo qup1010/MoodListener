@@ -10,7 +10,7 @@ import { exportData } from '../services';
 
 export const Settings: React.FC = () => {
   const navigate = useNavigate();
-  const [darkMode, setDarkMode] = useState<DarkModeOption>('light');
+  const [darkMode, setDarkMode] = useState<DarkModeOption>('system');
   const [currentTheme, setCurrentTheme] = useState('classic');
   const [showThemePicker, setShowThemePicker] = useState(false);
   const [showDarkModePicker, setShowDarkModePicker] = useState(false);
@@ -18,7 +18,7 @@ export const Settings: React.FC = () => {
 
   useEffect(() => {
     // 同步状态与 localStorage
-    const savedDarkMode = (localStorage.getItem('darkMode') || 'light') as DarkModeOption;
+    const savedDarkMode = (localStorage.getItem('darkMode') || 'system') as DarkModeOption;
     setDarkMode(savedDarkMode);
 
     const savedTheme = localStorage.getItem('themeId') || 'classic';
@@ -271,12 +271,15 @@ export const Settings: React.FC = () => {
                 <Icon name="chevron_right" size={20} />
               </div>
             </button>
-            <button className="flex w-full items-center justify-between p-4 transition-colors cursor-pointer active:bg-gray-50 dark:active:bg-gray-700/50">
+            <button
+              className="flex w-full items-center justify-between p-4 transition-colors cursor-pointer active:bg-gray-50 dark:active:bg-gray-700/50"
+              onClick={() => window.open('https://github.com/qup1010/MoodListener/issues/new', '_blank')}
+            >
               <div className="flex items-center gap-3">
-                <div className="size-9 rounded-lg bg-pink-100 dark:bg-pink-900/30 flex items-center justify-center text-pink-600 dark:text-pink-400 transition-colors">
-                  <Icon name="favorite" className="text-[22px]" />
+                <div className="size-9 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-orange-600 dark:text-orange-400 transition-colors">
+                  <Icon name="bug_report" className="text-[22px]" />
                 </div>
-                <span className="font-semibold text-gray-900 dark:text-white">五星好评</span>
+                <span className="font-semibold text-gray-900 dark:text-white">反馈问题</span>
               </div>
               <Icon name="open_in_new" className="text-gray-400 text-[20px]" />
             </button>

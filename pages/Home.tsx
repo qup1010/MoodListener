@@ -86,7 +86,11 @@ export const Home: React.FC = () => {
   };
 
   const username = profile?.username || '朋友';
-  const avatarUrl = profile?.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alex';
+  // 确保头像URL有效
+  const savedAvatar = profile?.avatar_url;
+  const avatarUrl = (savedAvatar && (savedAvatar.startsWith('http') || savedAvatar.startsWith('data:')))
+    ? savedAvatar
+    : 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alex';
 
   return (
     <div className="flex flex-col min-h-screen bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100">

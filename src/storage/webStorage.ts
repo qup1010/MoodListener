@@ -66,6 +66,12 @@ function setItem<T>(key: string, value: T): void {
 
 // 初始化
 export function initWebStorage(): void {
+    // 检查是否已初始化（使用特定标识防止重复初始化）
+    const initialized = localStorage.getItem('moodlistener_initialized');
+    if (initialized === 'true') {
+        return; // 已初始化，直接返回
+    }
+
     if (!localStorage.getItem(KEYS.SETTINGS)) {
         setItem(KEYS.SETTINGS, DEFAULT_SETTINGS);
     }
@@ -84,11 +90,17 @@ export function initWebStorage(): void {
     // 同步主题设置到 localStorage（供 theme.ts 使用）
     const settings = getItem(KEYS.SETTINGS, DEFAULT_SETTINGS);
     if (settings.dark_mode !== undefined) {
-        localStorage.setItem('darkMode', settings.dark_mode ? 'true' : 'false');
+        // 保持现有的 darkMode 设置，不覆盖用户选择
+        if (!localStorage.getItem('darkMode')) {
+            localStorage.setItem('darkMode', settings.dark_mode ? 'dark' : 'light');
+        }
     }
-    if (settings.theme_id) {
+    if (settings.theme_id && !localStorage.getItem('themeId')) {
         localStorage.setItem('themeId', settings.theme_id);
     }
+
+    // 标记已初始化
+    localStorage.setItem('moodlistener_initialized', 'true');
 }
 
 // ==================== Entries ====================
