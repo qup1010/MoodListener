@@ -13,7 +13,7 @@ export const CalendarView: React.FC = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date().getDate());
   const [moodMap, setMoodMap] = useState<Record<number, MoodType>>({});
-  const [dayEntry, setDayEntry] = useState<Entry | null>(null);
+  const [dayEntries, setDayEntries] = useState<Entry[]>([]);
   const [loading, setLoading] = useState(true);
 
   const year = currentDate.getFullYear();
@@ -69,10 +69,10 @@ export const CalendarView: React.FC = () => {
     try {
       const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(selectedDate).padStart(2, '0')}`;
       const entries = await fetchEntriesByDate(dateStr);
-      setDayEntry(entries.length > 0 ? entries[0] : null);
+      setDayEntries(entries);
     } catch (error) {
       console.error('加载日期记录失败:', error);
-      setDayEntry(null);
+      setDayEntries([]);
     }
   };
 
@@ -191,43 +191,43 @@ export const CalendarView: React.FC = () => {
             <div className="flex items-center justify-center py-10">
               <span className="text-gray-400">加载中...</span>
             </div>
-          ) : dayEntry ? (
-            <div className="relative flex flex-col bg-white dark:bg-card-dark rounded-2xl p-5 shadow-soft border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all animate-in fade-in slide-in-from-bottom-2 duration-300">
-              {(() => {
-                const info = getMoodInfo(dayEntry.mood);
+          ) : dayEntries.length > 0 ? (
+            <div className="flex flex-col gap-4">
+              {dayEntries.map((entry) => {
+                const info = getMoodInfo(entry.mood);
                 return (
-                  <>
+                  <div key={entry.id} className="relative flex flex-col bg-white dark:bg-card-dark rounded-2xl p-5 shadow-soft border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all animate-in fade-in slide-in-from-bottom-2 duration-300">
                     <div className="flex justify-between items-start mb-3">
                       <div className="flex items-center gap-3">
                         <div className={`flex items-center justify-center size-10 rounded-full ${info.moodBg} ${info.moodColor}`}>
-                          <Icon name={dayEntry.mood === 'positive' ? 'sentiment_satisfied' : dayEntry.mood === 'negative' ? 'sentiment_sad' : 'sentiment_neutral'} size={20} fill />
+                          <Icon name={entry.mood === 'positive' ? 'sentiment_satisfied' : entry.mood === 'negative' ? 'sentiment_sad' : 'sentiment_neutral'} size={20} fill />
                         </div>
                         <div>
-                          <h3 className="text-base font-bold text-gray-900 dark:text-white leading-tight">{dayEntry.title}</h3>
-                          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mt-0.5">{dayEntry.time}</p>
+                          <h3 className="text-base font-bold text-gray-900 dark:text-white leading-tight">{entry.title}</h3>
+                          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mt-0.5">{entry.time}</p>
                         </div>
                       </div>
                       <div className={`px-2 py-0.5 rounded-md border ${info.tagClass}`}>
                         <span className="text-[10px] font-bold tracking-wide uppercase">{info.tagText}</span>
                       </div>
                     </div>
-                    {dayEntry.content && (
+                    {entry.content && (
                       <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed mb-4 pl-[52px]">
-                        {dayEntry.content}
+                        {entry.content}
                       </p>
                     )}
-                    {dayEntry.tags && dayEntry.tags.length > 0 && (
+                    {entry.tags && entry.tags.length > 0 && (
                       <div className="flex flex-wrap gap-2 pl-[52px]">
-                        {dayEntry.tags.map(tag => (
+                        {entry.tags.map(tag => (
                           <span key={tag} className="inline-flex items-center px-2.5 py-1 rounded-md bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-xs font-medium text-gray-600 dark:text-gray-400">
                             #{tag}
                           </span>
                         ))}
                       </div>
                     )}
-                  </>
+                  </div>
                 );
-              })()}
+              })}
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-10 text-gray-400">
@@ -241,16 +241,6 @@ export const CalendarView: React.FC = () => {
               </button>
             </div>
           )}
-
-          <div className="mt-8 text-center">
-            <button
-              onClick={() => navigate('/history')}
-              className="text-sm font-medium text-primary hover:text-primary-dark transition-colors flex items-center justify-center gap-1 mx-auto hover:bg-primary/5 px-4 py-2 rounded-full"
-            >
-              <span>查看当天所有记录</span>
-              <Icon name="arrow_forward" className="text-base" />
-            </button>
-          </div>
         </div>
         <div className="h-24 shrink-0"></div>
       </main>

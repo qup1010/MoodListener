@@ -104,7 +104,7 @@ export const Home: React.FC = () => {
             className="size-12 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden border-2 border-white dark:border-gray-600 shadow-sm cursor-pointer hover:scale-105 transition-transform"
             onClick={() => navigate('/settings')}
           >
-            <img src={avatarUrl} alt="User" />
+            <img src={avatarUrl} alt="User" className="w-full h-full object-cover" />
           </div>
         </div>
       </header>

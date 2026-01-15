@@ -71,33 +71,27 @@ export const ProfileSettings: React.FC = () => {
         }
     };
 
-    /**
-     * 压缩图片
-     */
     const compressImage = (dataUrl: string, maxSize = 200): Promise<string> => {
         return new Promise((resolve) => {
             const img = new Image();
             img.onload = () => {
                 const canvas = document.createElement('canvas');
-                let { width, height } = img;
+                // 强制正方形
+                canvas.width = maxSize;
+                canvas.height = maxSize;
 
-                // 按比例缩放到 maxSize
-                if (width > height) {
-                    if (width > maxSize) {
-                        height = (height * maxSize) / width;
-                        width = maxSize;
-                    }
-                } else {
-                    if (height > maxSize) {
-                        width = (width * maxSize) / height;
-                        height = maxSize;
-                    }
+                const ctx = canvas.getContext('2d');
+                if (!ctx) {
+                    resolve(dataUrl);
+                    return;
                 }
 
-                canvas.width = width;
-                canvas.height = height;
-                const ctx = canvas.getContext('2d');
-                ctx?.drawImage(img, 0, 0, width, height);
+                // 中心裁剪
+                const minSide = Math.min(img.width, img.height);
+                const sx = (img.width - minSide) / 2;
+                const sy = (img.height - minSide) / 2;
+
+                ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, maxSize, maxSize);
                 resolve(canvas.toDataURL('image/jpeg', 0.8));
             };
             img.src = dataUrl;
@@ -219,7 +213,7 @@ export const ProfileSettings: React.FC = () => {
                                         : 'border-transparent'
                                         }`}
                                 >
-                                    <img src={url} alt={`头像 ${index + 1}`} className="w-full h-full" />
+                                    <img src={url} alt={`头像 ${index + 1}`} className="w-full h-full object-cover" />
                                 </button>
                             ))}
                         </div>
