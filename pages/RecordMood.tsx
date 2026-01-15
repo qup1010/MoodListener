@@ -19,6 +19,7 @@ export const RecordMood: React.FC = () => {
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
   const [images, setImages] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [fetchingLocation, setFetchingLocation] = useState(false);
 
   const [showEditModal, setShowEditModal] = useState(false);
   const [details, setDetails] = useState({
@@ -77,6 +78,51 @@ export const RecordMood: React.FC = () => {
 
   const removeImage = (index: number) => {
     setImages(images.filter((_, i) => i !== index));
+  };
+
+  /**
+   * 获取当前位置
+   */
+  const getCurrentLocation = async () => {
+    if (fetchingLocation) return;
+
+    setFetchingLocation(true);
+    try {
+      // 使用浏览器 Geolocation API
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 60000
+        });
+      });
+
+      const { latitude, longitude } = position.coords;
+
+      // 尝试通过反向地理编码获取地址名称
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`,
+          { headers: { 'Accept-Language': 'zh-CN,zh' } }
+        );
+        const data = await response.json();
+        const address = data.address;
+        // 构建简短地址
+        const locationName = address.road || address.neighbourhood || address.suburb || address.city || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+        setDetails(prev => ({ ...prev, location: locationName }));
+      } catch {
+        // 反向地理编码失败，使用坐标
+        setDetails(prev => ({ ...prev, location: `${latitude.toFixed(4)}, ${longitude.toFixed(4)}` }));
+      }
+    } catch (error: any) {
+      if (error.code === 1) {
+        alert('请允许位置权限');
+      } else {
+        alert('获取位置失败');
+      }
+    } finally {
+      setFetchingLocation(false);
+    }
   };
 
   /**
@@ -241,15 +287,17 @@ export const RecordMood: React.FC = () => {
                   >
                     <Icon name="image" size={20} />
                   </button>
-                  <button aria-label="Add voice note" className="p-2 text-gray-400 hover:text-primary dark:hover:text-white hover:bg-primary/5 dark:hover:bg-white/5 rounded-lg transition-colors">
-                    <Icon name="mic" size={20} />
-                  </button>
-                  <button aria-label="Add location" className="p-2 text-gray-400 hover:text-primary dark:hover:text-white hover:bg-primary/5 dark:hover:bg-white/5 rounded-lg transition-colors">
+                  <button
+                    aria-label="Add location"
+                    className={`p-2 hover:bg-primary/5 dark:hover:bg-white/5 rounded-lg transition-colors ${details.location ? 'text-primary' : 'text-gray-400 hover:text-primary dark:hover:text-white'}`}
+                    onClick={getCurrentLocation}
+                    disabled={fetchingLocation}
+                  >
                     <Icon name="location_on" size={20} />
                   </button>
                 </div>
                 <span className="text-xs font-medium text-gray-400">
-                  {uploading ? '上传中...' : '刚刚'}
+                  {uploading ? '上传中...' : fetchingLocation ? '定位中...' : details.location || '刚刚'}
                 </span>
               </div>
             </div>

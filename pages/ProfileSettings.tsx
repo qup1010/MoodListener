@@ -71,27 +71,85 @@ export const ProfileSettings: React.FC = () => {
         }
     };
 
+    /**
+     * 压缩图片
+     */
+    const compressImage = (dataUrl: string, maxSize = 200): Promise<string> => {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let { width, height } = img;
+
+                // 按比例缩放到 maxSize
+                if (width > height) {
+                    if (width > maxSize) {
+                        height = (height * maxSize) / width;
+                        width = maxSize;
+                    }
+                } else {
+                    if (height > maxSize) {
+                        width = (width * maxSize) / height;
+                        height = maxSize;
+                    }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx?.drawImage(img, 0, 0, width, height);
+                resolve(canvas.toDataURL('image/jpeg', 0.8));
+            };
+            img.src = dataUrl;
+        });
+    };
+
     const handlePickFromGallery = async () => {
         try {
             const { Camera, CameraResultType, CameraSource } = await import('@capacitor/camera');
             const image = await Camera.getPhoto({
-                quality: 90,
+                quality: 80,
                 allowEditing: true,
                 resultType: CameraResultType.DataUrl,
-                source: CameraSource.Photos
+                source: CameraSource.Photos,
+                width: 200,
+                height: 200
             });
 
             if (image.dataUrl) {
-                setAvatarUrl(image.dataUrl);
+                // 压缩图片
+                const compressed = await compressImage(image.dataUrl);
+                setAvatarUrl(compressed);
                 setShowAvatarPicker(false);
             }
         } catch (error: any) {
             // 用户取消选择不算错误
             if (error.message !== 'User cancelled photos app') {
                 console.error('选择图片失败:', error);
-                alert('选择图片失败，请重试');
+                // Web 端降级方案：使用 file input
+                handleWebFilePicker();
             }
         }
+    };
+
+    const handleWebFilePicker = () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.onchange = async (e: any) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                const dataUrl = event.target?.result as string;
+                const compressed = await compressImage(dataUrl);
+                setAvatarUrl(compressed);
+                setShowAvatarPicker(false);
+            };
+            reader.readAsDataURL(file);
+        };
+        input.click();
     };
 
     if (loading) {

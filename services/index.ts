@@ -294,21 +294,57 @@ export async function deleteTag(id: number): Promise<void> {
 
 // ==================== Upload API ====================
 
+/**
+ * 压缩图片
+ */
+async function compressImage(file: File, maxWidth = 800, quality = 0.7): Promise<string> {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let { width, height } = img;
+
+                // 按比例缩放
+                if (width > maxWidth) {
+                    height = (height * maxWidth) / width;
+                    width = maxWidth;
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+
+                const ctx = canvas.getContext('2d');
+                if (!ctx) {
+                    reject(new Error('无法创建 canvas context'));
+                    return;
+                }
+
+                ctx.drawImage(img, 0, 0, width, height);
+                const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+                resolve(compressedDataUrl);
+            };
+            img.onerror = () => reject(new Error('图片加载失败'));
+            img.src = e.target?.result as string;
+        };
+        reader.onerror = () => reject(new Error('文件读取失败'));
+        reader.readAsDataURL(file);
+    });
+}
+
 export async function uploadImage(file: File): Promise<UploadResult> {
     if (isNative && filesStorage) {
         return filesStorage.saveImage(file);
     }
-    // Web: 使用 Data URL
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-            const dataUrl = reader.result as string;
-            resolve({
-                filename: file.name,
-                url: dataUrl
-            });
+    // Web: 压缩图片后使用 Data URL
+    try {
+        const compressedUrl = await compressImage(file);
+        return {
+            filename: file.name,
+            url: compressedUrl
         };
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-    });
+    } catch (error) {
+        throw new Error('图片处理失败');
+    }
 }
