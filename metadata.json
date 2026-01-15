@@ -1,9 +1,0 @@
-{
-  "name": "MoodListener",
-  "description": "A mindful mood tracking application to record, review, and analyze your emotional well-being.",
-  "requestFramePermissions": [
-    "camera",
-    "microphone",
-    "geolocation"
-  ]
-}
