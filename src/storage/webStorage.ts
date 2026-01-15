@@ -14,7 +14,9 @@ export const isNativePlatform = () => {
 const DEFAULT_SETTINGS = {
     id: 1,
     notification_enabled: true,
-    notification_time: "20:00",
+    reminders: [
+        { id: '1', time: '20:00', enabled: true, days: [1, 2, 3, 4, 5, 6, 7] }
+    ],
     theme_id: "classic",
     dark_mode: false
 };
@@ -66,11 +68,18 @@ function setItem<T>(key: string, value: T): void {
 
 // 初始化
 export function initWebStorage(): void {
-    // 检查是否已初始化（使用特定标识防止重复初始化）
-    const initialized = localStorage.getItem('moodlistener_initialized');
-    if (initialized === 'true') {
+    // 双重检查防止重复初始化
+    // 1. sessionStorage 防止同一会话内多次调用
+    // 2. localStorage 防止跨会话检查
+    const sessionInit = sessionStorage.getItem('moodlistener_session_init');
+    const localInit = localStorage.getItem('moodlistener_initialized');
+
+    if (sessionInit === 'true' || localInit === 'true') {
         return; // 已初始化，直接返回
     }
+
+    // 立即设置 session 标记防止并发调用
+    sessionStorage.setItem('moodlistener_session_init', 'true');
 
     if (!localStorage.getItem(KEYS.SETTINGS)) {
         setItem(KEYS.SETTINGS, DEFAULT_SETTINGS);
@@ -215,7 +224,12 @@ export function webFetchSettings(): any {
 
 export function webUpdateSettings(data: any): any {
     const settings = getItem(KEYS.SETTINGS, DEFAULT_SETTINGS);
-    const updated = { ...settings, ...data };
+    // 确保保留 id 字段，合并更新数据
+    const updated = {
+        ...settings,
+        ...data,
+        id: settings.id // 强制保留原始ID
+    };
     setItem(KEYS.SETTINGS, updated);
     return updated;
 }

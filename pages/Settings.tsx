@@ -6,7 +6,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '../components/Icon';
 import { THEMES, toggleDarkMode, applyTheme, DarkModeOption } from '../theme';
-import { exportData } from '../services';
+import { exportData, fetchSettings, SettingsData } from '../services';
 
 export const Settings: React.FC = () => {
   const navigate = useNavigate();
@@ -15,6 +15,7 @@ export const Settings: React.FC = () => {
   const [showThemePicker, setShowThemePicker] = useState(false);
   const [showDarkModePicker, setShowDarkModePicker] = useState(false);
   const [exporting, setExporting] = useState<string | null>(null);
+  const [remindersText, setRemindersText] = useState('加载中...');
 
   useEffect(() => {
     // 同步状态与 localStorage
@@ -23,7 +24,23 @@ export const Settings: React.FC = () => {
 
     const savedTheme = localStorage.getItem('themeId') || 'classic';
     setCurrentTheme(savedTheme);
+
+    loadSettingsStatus();
   }, []);
+
+  const loadSettingsStatus = async () => {
+    try {
+      const settings = await fetchSettings();
+      if (!settings.notification_enabled) {
+        setRemindersText('未开启');
+      } else {
+        const count = settings.reminders?.filter(r => r.enabled).length || 0;
+        setRemindersText(count > 0 ? `已开启 ${count} 个提醒` : '暂无提醒');
+      }
+    } catch (error) {
+      setRemindersText('配置');
+    }
+  };
 
   const handleDarkModeChange = (option: DarkModeOption) => {
     setDarkMode(option);
@@ -145,7 +162,7 @@ export const Settings: React.FC = () => {
                 <span className="font-semibold text-gray-900 dark:text-white">定时提醒</span>
               </div>
               <div className="flex items-center gap-1 text-gray-400">
-                <span className="text-sm font-medium">每日 20:00</span>
+                <span className="text-sm font-medium">{remindersText}</span>
                 <Icon name="chevron_right" size={20} />
               </div>
             </div>

@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS settings (
     id INTEGER PRIMARY KEY DEFAULT 1,
     notification_enabled INTEGER DEFAULT 1,
     notification_time TEXT DEFAULT "20:00",
+    reminders TEXT DEFAULT NULL,
     theme_id TEXT DEFAULT "classic",
     dark_mode INTEGER DEFAULT 0
 );
@@ -43,15 +44,16 @@ CREATE TABLE IF NOT EXISTS tags (
     is_default INTEGER DEFAULT 0
 );
 
--- 初始化默认数据
+-- 初始化版本控制表
+CREATE TABLE IF NOT EXISTS db_version (
+    version INTEGER PRIMARY KEY DEFAULT 1,
+    initialized_at TEXT DEFAULT (datetime('now', 'localtime'))
+);
+
+-- 初始化默认数据（只在首次创建时执行）
 INSERT OR IGNORE INTO settings (id) VALUES (1);
 INSERT OR IGNORE INTO user_profile (id) VALUES (1);
-
--- 插入默认标签
-INSERT OR IGNORE INTO tags (name, mood_type, is_default) VALUES 
-('开心', 'positive', 1), ('兴奋', 'positive', 1), ('感恩', 'positive', 1),
-('平静', 'neutral', 1), ('思考', 'neutral', 1), ('疲惫', 'neutral', 1),
-('难过', 'negative', 1), ('焦虑', 'negative', 1), ('生气', 'negative', 1);
+INSERT OR IGNORE INTO db_version (version) VALUES (1);
 `;
 
 export const getDBConnection = async (): Promise<SQLiteDBConnection> => {
@@ -78,6 +80,31 @@ export const getDBConnection = async (): Promise<SQLiteDBConnection> => {
         if (!isInitialized) {
             // 执行建表语句
             await dbConnection.execute(SCHEMA_SQL);
+
+            // 检查是否是首次初始化（通过检查tags表是否为空）
+            const checkTags = await dbConnection.query('SELECT COUNT(*) as count FROM tags');
+            const tagCount = checkTags.values?.[0]?.count || 0;
+
+            if (tagCount === 0) {
+                // 首次初始化：插入默认标签
+                const DEFAULT_TAGS_SQL = `
+                    INSERT INTO tags (name, mood_type, is_default) VALUES 
+                    ('开心', 'positive', 1), ('兴奋', 'positive', 1), ('感恩', 'positive', 1),
+                    ('平静', 'neutral', 1), ('思考', 'neutral', 1), ('疲惫', 'neutral', 1),
+                    ('难过', 'negative', 1), ('焦虑', 'negative', 1), ('生气', 'negative', 1);
+                `;
+                await dbConnection.execute(DEFAULT_TAGS_SQL);
+
+                // 设置默认 reminders（JSON 格式）
+                const defaultReminders = JSON.stringify([
+                    { id: '1', time: '20:00', enabled: true, days: [1, 2, 3, 4, 5, 6, 7] }
+                ]);
+                await dbConnection.run(
+                    'UPDATE settings SET reminders = ? WHERE id = 1',
+                    [defaultReminders]
+                );
+            }
+
             isInitialized = true;
         }
 

@@ -10,10 +10,7 @@ import * as webStorage from '../src/storage/webStorage';
 // 检测是否在原生环境
 const isNative = Capacitor.isNativePlatform();
 
-// 初始化（Web 环境需要初始化 localStorage）
-if (!isNative) {
-    webStorage.initWebStorage();
-}
+// NOTE: initWebStorage 已在 index.tsx 中调用，此处不需要重复调用
 
 // 动态导入原生存储模块（仅在原生环境使用）
 let entriesStorage: any = null;
@@ -82,17 +79,24 @@ export interface StatsData {
     weekly_trend: WeeklyTrend[];
 }
 
+export interface Reminder {
+    id: string;
+    time: string;
+    enabled: boolean;
+    days: number[]; // 1-7 (Mon-Sun)
+}
+
 export interface SettingsData {
     id: number;
-    notification_enabled: boolean;
-    notification_time: string;
+    notification_enabled: boolean; // Keep for backward compatibility or master switch
+    reminders: Reminder[];
     theme_id: string;
     dark_mode: boolean;
 }
 
 export interface UpdateSettingsData {
     notification_enabled?: boolean;
-    notification_time?: string;
+    reminders?: Reminder[];
     theme_id?: string;
     dark_mode?: boolean;
 }

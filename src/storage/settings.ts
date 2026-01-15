@@ -1,9 +1,17 @@
 import { getDBConnection } from './database';
 
+export interface Reminder {
+    id: string;
+    time: string;
+    enabled: boolean;
+    days: number[];
+}
+
 export interface SettingsData {
     id: number;
     notification_enabled: boolean;
     notification_time: string;
+    reminders: Reminder[];
     theme_id: string;
     dark_mode: boolean;
 }
@@ -11,6 +19,7 @@ export interface SettingsData {
 export interface UpdateSettingsData {
     notification_enabled?: boolean;
     notification_time?: string;
+    reminders?: Reminder[];
     theme_id?: string;
     dark_mode?: boolean;
 }
@@ -33,10 +42,32 @@ export async function fetchSettings(): Promise<SettingsData> {
 
     if (values && values.length > 0) {
         const row = values[0];
+        let reminders: Reminder[] = [];
+
+        // 解析 reminders JSON 字段
+        if (row.reminders) {
+            try {
+                reminders = JSON.parse(row.reminders);
+            } catch (e) {
+                console.error('Failed to parse reminders:', e);
+            }
+        }
+
+        // 兼容旧数据：如果没有 reminders 但有 notification_time
+        if (reminders.length === 0 && row.notification_time) {
+            reminders = [{
+                id: '1',
+                time: row.notification_time,
+                enabled: !!row.notification_enabled,
+                days: [1, 2, 3, 4, 5, 6, 7]
+            }];
+        }
+
         return {
             id: row.id,
             notification_enabled: !!row.notification_enabled,
             notification_time: row.notification_time,
+            reminders: reminders,
             theme_id: row.theme_id,
             dark_mode: !!row.dark_mode
         };
@@ -47,6 +78,7 @@ export async function fetchSettings(): Promise<SettingsData> {
         id: 1,
         notification_enabled: true,
         notification_time: "20:00",
+        reminders: [{ id: '1', time: '20:00', enabled: true, days: [1, 2, 3, 4, 5, 6, 7] }],
         theme_id: "classic",
         dark_mode: false
     };
@@ -64,6 +96,10 @@ export async function updateSettings(data: UpdateSettingsData): Promise<Settings
     if (data.notification_time !== undefined) {
         setClauses.push('notification_time = ?');
         params.push(data.notification_time);
+    }
+    if (data.reminders !== undefined) {
+        setClauses.push('reminders = ?');
+        params.push(JSON.stringify(data.reminders));
     }
     if (data.theme_id !== undefined) {
         setClauses.push('theme_id = ?');

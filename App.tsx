@@ -19,6 +19,23 @@ const App: React.FC = () => {
     initTheme();
     // 异步同步主题设置
     syncThemeFromSettings();
+
+    // 监听通知点击
+    const setupNotifications = async () => {
+      try {
+        const { LocalNotifications } = await import('@capacitor/local-notifications');
+
+        await LocalNotifications.addListener('localNotificationActionPerformed', (notification) => {
+          // 无论是点击通知本身，还是点击操作按钮，都跳转到记录页
+          // 可以根据 notification.actionId === 'RECORD_ACTION' 做更细致的处理
+          window.location.hash = '#/record';
+        });
+      } catch (error) {
+        console.error('Notification listener setup failed:', error);
+      }
+    };
+
+    setupNotifications();
   }, []);
 
   return (

@@ -5,6 +5,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '../components/Icon';
+import logo from '../src/assets/logo.png';
 
 export const AboutInfo: React.FC = () => {
     const navigate = useNavigate();
@@ -27,8 +28,8 @@ export const AboutInfo: React.FC = () => {
             <main className="px-4 py-6 flex flex-col gap-6">
                 {/* 应用 Logo 和名称 */}
                 <section className="flex flex-col items-center py-8">
-                    <div className="size-24 rounded-3xl bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center shadow-xl shadow-primary/30 mb-4">
-                        <Icon name="mood" className="text-white text-5xl" />
+                    <div className="size-24 rounded-[28%] overflow-hidden shadow-2xl shadow-primary/20 mb-4 bg-white ring-8 ring-gray-50/50 dark:ring-gray-800/50">
+                        <img src={logo} alt="MoodListener" className="w-full h-full object-contain" />
                     </div>
                     <h2 className="text-2xl font-extrabold text-gray-900 dark:text-white">MoodListener</h2>
                     <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">听见你的情绪</p>

@@ -81,47 +81,169 @@ export const RecordMood: React.FC = () => {
   };
 
   /**
-   * 获取当前位置
+   * 获取当前位置（优化权限申请流程）
    */
   const getCurrentLocation = async () => {
     if (fetchingLocation) return;
 
     setFetchingLocation(true);
+    console.log('[Location] Starting location fetch...');
+
     try {
-      // 使用浏览器 Geolocation API
-      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 60000
-        });
+      // 动态导入 Geolocation 插件
+      const { Geolocation } = await import('@capacitor/geolocation');
+
+      console.log('[Location] Geolocation plugin loaded');
+
+      // 先检查权限状态
+      const permissionStatus = await Geolocation.checkPermissions();
+      console.log('[Location] Permission status:', permissionStatus.location);
+
+      // 如果被拒绝，引导用户到设置
+      if (permissionStatus.location === 'denied') {
+        console.log('[Location] Permission denied');
+        if (confirm('位置权限已被拒绝。\n\n要开启位置获取功能，请前往:\n设置 → 应用 → MoodListener → 权限 → 位置\n\n是否现在前往设置？')) {
+          // 这里可以尝试打开应用设置（需要额外插件）
+          alert('请手动在系统设置中开启位置权限');
+        }
+        setFetchingLocation(false);
+        return;
+      }
+
+      // 如果未请求过，请求权限
+      if (permissionStatus.location === 'prompt' || permissionStatus.location === 'prompt-with-rationale') {
+        console.log('[Location] Requesting permission...');
+        const requestResult = await Geolocation.requestPermissions();
+        console.log('[Location] Permission request result:', requestResult.location);
+
+        if (requestResult.location !== 'granted') {
+          alert('位置权限被拒绝，无法获取位置');
+          setFetchingLocation(false);
+          return;
+        }
+      }
+
+      console.log('[Location] Getting current position...');
+
+      // 获取位置
+      const position = await Geolocation.getCurrentPosition({
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 0
       });
 
+      console.log('[Location] Position obtained:', position.coords);
       const { latitude, longitude } = position.coords;
+      const coords = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
 
-      // 尝试通过反向地理编码获取地址名称
+      // 先设置坐标，即使地理编码失败也有基本信息
+      setDetails(prev => ({ ...prev, location: coords }));
+
+      // 使用 BigDataCloud 免费逆地理编码 API（完全免费，无需key）
+      console.log('[Location] Fetching address from BigDataCloud...');
+
       try {
-        const response = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`,
-          { headers: { 'Accept-Language': 'zh-CN,zh' } }
-        );
-        const data = await response.json();
-        const address = data.address;
-        // 构建简短地址
-        const locationName = address.road || address.neighbourhood || address.suburb || address.city || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
-        setDetails(prev => ({ ...prev, location: locationName }));
-      } catch {
-        // 反向地理编码失败，使用坐标
-        setDetails(prev => ({ ...prev, location: `${latitude.toFixed(4)}, ${longitude.toFixed(4)}` }));
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+        // BigDataCloud 免费API - 支持中文
+        const apiUrl = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=zh`;
+
+        const response = await fetch(apiUrl, {
+          signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log('[Location] BigDataCloud response:', data);
+
+          // 构建中文地址
+          let locationName = '';
+          const parts = [];
+
+          // BigDataCloud 返回的字段
+          if (data.locality) parts.push(data.locality); // 街道/社区
+          if (data.localityInfo?.administrative?.length > 0) {
+            // 获取区/市
+            const admin = data.localityInfo.administrative;
+            if (admin[3]?.name) parts.push(admin[3].name); // 区
+            if (admin[4]?.name && admin[4].name !== admin[3]?.name) {
+              parts.push(admin[4].name); // 市
+            }
+          }
+
+          if (parts.length > 0) {
+            locationName = parts.join(', ');
+          } else if (data.city) {
+            // 降级方案：只有城市名
+            locationName = data.city + (data.countryName ? `, ${data.countryName}` : '');
+          } else {
+            locationName = coords;
+          }
+
+          console.log('[Location] Final location name:', locationName);
+          setDetails(prev => ({ ...prev, location: locationName }));
+
+          // 询问用户是否要自定义位置名称
+          if (confirm(`✅ 已获取位置:\n${locationName}\n\n是否要自定义位置名称？`)) {
+            const customLocation = prompt('请输入自定义位置名称:', locationName);
+            if (customLocation && customLocation.trim()) {
+              setDetails(prev => ({ ...prev, location: customLocation.trim() }));
+              alert('✅ 位置已更新');
+            }
+          }
+        } else {
+          console.log('[Location] API request failed');
+          // 直接提供手动输入选项
+          if (confirm(`已获取GPS坐标:\n${coords}\n\n地址解析失败，是否手动输入位置？`)) {
+            const customLocation = prompt('请输入位置名称:', '');
+            if (customLocation && customLocation.trim()) {
+              setDetails(prev => ({ ...prev, location: customLocation.trim() }));
+              alert('✅ 位置已设置');
+            }
+          }
+        }
+      } catch (geoError: any) {
+        // 地理编码失败不影响功能，坐标已经设置了
+        console.log('[Location] Geocoding failed:', geoError.message);
+
+        // 提供手动输入选项
+        if (confirm(`已获取GPS坐标:\n${coords}\n\n地址解析${geoError.name === 'AbortError' ? '超时' : '失败'}，是否手动输入位置？`)) {
+          const customLocation = prompt('请输入位置名称:', '');
+          if (customLocation && customLocation.trim()) {
+            setDetails(prev => ({ ...prev, location: customLocation.trim() }));
+            alert('✅ 位置已设置');
+          }
+        }
       }
     } catch (error: any) {
-      if (error.code === 1) {
-        alert('请允许位置权限');
+      console.error('[Location] Error:', error);
+
+      let errorMessage = '获取位置失败';
+
+      if (error.message?.includes('location unavailable')) {
+        errorMessage = '⚠️ 位置服务不可用\n请确保：\n1. GPS已开启\n2. 位置服务已启用\n3. 在室外或窗边';
+      } else if (error.message?.includes('timeout')) {
+        errorMessage = '⚠️ 获取位置超时\n请尝试：\n1. 到室外开阔处\n2. 重启位置服务';
+      } else if (error.message?.includes('denied') || error.message?.includes('User denied')) {
+        errorMessage = '⚠️ 位置权限被拒绝';
       } else {
-        alert('获取位置失败');
+        errorMessage = `⚠️ 获取位置失败:\n${error.message || '未知错误'}`;
+      }
+
+      // 即使GPS失败，也提供手动输入选项
+      if (confirm(`${errorMessage}\n\n是否手动输入位置？`)) {
+        const customLocation = prompt('请输入位置名称:', '');
+        if (customLocation && customLocation.trim()) {
+          setDetails(prev => ({ ...prev, location: customLocation.trim() }));
+          alert('✅ 位置已设置');
+        }
       }
     } finally {
       setFetchingLocation(false);
+      console.log('[Location] Fetch complete');
     }
   };
 

@@ -99,30 +99,73 @@ export const ProfileSettings: React.FC = () => {
     };
 
     const handlePickFromGallery = async () => {
+        console.log('[Avatar] Starting image picker...');
+        setShowAvatarPicker(false); // 先关闭选择器
+
         try {
             const { Camera, CameraResultType, CameraSource } = await import('@capacitor/camera');
+
+            // 检查是否有相册权限
+            console.log('[Avatar] Checking permissions...');
+            const permissions = await Camera.checkPermissions();
+            console.log('[Avatar] Permission status:', permissions);
+
+            if (permissions.photos === 'denied') {
+                if (confirm('相册权限已被拒绝。\n\n要选择头像，请前往:\n设置 → 应用 → MoodListener → 权限 → 照片\n\n是否现在前往设置？')) {
+                    alert('请手动在系统设置中开启相册权限');
+                }
+                return;
+            }
+
+            // 如果权限未授予，请求权限
+            if (permissions.photos !== 'granted') {
+                console.log('[Avatar] Requesting permissions...');
+                const requestResult = await Camera.requestPermissions({ permissions: ['photos'] });
+                console.log('[Avatar] Permission request result:', requestResult);
+
+                if (requestResult.photos !== 'granted') {
+                    alert('需要相册权限才能选择头像');
+                    return;
+                }
+            }
+
+            console.log('[Avatar] Opening photo picker...');
+
             const image = await Camera.getPhoto({
-                quality: 80,
+                quality: 90,
                 allowEditing: true,
                 resultType: CameraResultType.DataUrl,
                 source: CameraSource.Photos,
-                width: 200,
-                height: 200
+                width: 400,
+                height: 400,
+                promptLabelHeader: '选择头像',
+                promptLabelPhoto: '从相册选择',
+                promptLabelPicture: '拍照'
             });
 
+            console.log('[Avatar] Image selected');
+
             if (image.dataUrl) {
+                console.log('[Avatar] Compressing image...');
                 // 压缩图片
                 const compressed = await compressImage(image.dataUrl);
+                console.log('[Avatar] Image compressed, size:', compressed.length);
                 setAvatarUrl(compressed);
-                setShowAvatarPicker(false);
+                alert('✅ 头像已更新');
             }
         } catch (error: any) {
+            console.error('[Avatar] Error:', error);
+
             // 用户取消选择不算错误
-            if (error.message !== 'User cancelled photos app') {
-                console.error('选择图片失败:', error);
-                // Web 端降级方案：使用 file input
-                handleWebFilePicker();
+            if (error.message?.includes('cancel') || error.message?.includes('User cancelled')) {
+                console.log('[Avatar] User cancelled');
+                return;
             }
+
+            // Web 端降级方案：使用 file input
+            console.log('[Avatar] Falling back to web file picker');
+            alert('⚠️ 相机插件出错，使用备用方案...');
+            handleWebFilePicker();
         }
     };
 
