@@ -1,0 +1,68 @@
+name: Build Signed APK
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+
+    env:
+      MOODLISTENER_UPLOAD_STORE_FILE: ${{ github.workspace }}/android/moodlistener-release.jks
+      MOODLISTENER_UPLOAD_STORE_PASSWORD: ${{ secrets.MOODLISTENER_UPLOAD_STORE_PASSWORD }}
+      MOODLISTENER_UPLOAD_KEY_ALIAS: ${{ secrets.MOODLISTENER_UPLOAD_KEY_ALIAS }}
+      MOODLISTENER_UPLOAD_KEY_PASSWORD: ${{ secrets.MOODLISTENER_UPLOAD_KEY_PASSWORD }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Decode keystore
+        run: |
+          echo "${{ secrets.MOODLISTENER_UPLOAD_KEYSTORE_BASE64 }}" | base64 -d > "$MOODLISTENER_UPLOAD_STORE_FILE"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web assets
+        run: npm run build
+
+      - name: Sync Capacitor Android
+        run: npx cap sync android
+
+      - name: Build release APK
+        run: |
+          cd android
+          ./gradlew assembleRelease
+
+      - name: Upload APK artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: moodlistener-apk
+          path: android/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: android/app/build/outputs/apk/release/app-release.apk
+          generate_release_notes: true

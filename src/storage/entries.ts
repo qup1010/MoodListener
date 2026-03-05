@@ -1,4 +1,5 @@
 import { getDBConnection } from './database';
+import { deleteImage } from './files';
 import { Entry, MoodType } from '../../types';
 
 export interface CreateEntryData {
@@ -31,6 +32,37 @@ export interface EntryFilters {
     offset?: number;
 }
 
+const parseJsonArray = (value: string | null | undefined): string[] => {
+    if (!value) return [];
+    try {
+        const parsed = JSON.parse(value);
+        return Array.isArray(parsed) ? parsed : [];
+    } catch {
+        return [];
+    }
+};
+
+const extractFilenameFromImageUrl = (url: string): string | null => {
+    if (!url) return null;
+    if (url.startsWith('data:')) return null;
+
+    try {
+        const normalized = decodeURIComponent(url).split('?')[0];
+        const filename = normalized.split('/').pop() || '';
+        return filename || null;
+    } catch {
+        return null;
+    }
+};
+
+const removeImages = async (images: string[]) => {
+    const filenames = images
+        .map(extractFilenameFromImageUrl)
+        .filter((name): name is string => !!name);
+
+    await Promise.allSettled(filenames.map(name => deleteImage(name)));
+};
+
 const mapRowToEntry = (row: any): Entry => {
     return {
         id: row.id.toString(),
@@ -39,25 +71,12 @@ const mapRowToEntry = (row: any): Entry => {
         mood: row.mood as MoodType,
         title: row.title,
         content: row.content,
-        tags: row.tags ? JSON.parse(row.tags) : [],
+        tags: parseJsonArray(row.tags),
         location: row.location,
-        images: row.images ? JSON.parse(row.images) : [],
+        images: parseJsonArray(row.images),
         created_at: row.created_at,
-        updated_at: row.updated_at,
-        // images isn't in Entry interface in types.ts but is in CreateEntryData? 
-        // Checking types.ts content history: types.ts Entry didn't have images field visible in the snippet?
-        // Wait, let me double check types.ts snippet in Step 18.
-        // It showed:
-        // export interface Entry { ... tags: string[]; location?: string; ... }
-        // It did NOT show images in Entry interface. 
-        // But backend CreateEntryData had images.
-        // I should probably add images to Entry interface in types.ts or just ignore it for now if frontend doesn't use it yet.
-        // However, the user request #9bee... "Mood App Feature Expansion" mentioned "Integrating image attachment support".
-        // So images SHOULD be in Entry. I might need to update types.ts too.
-        // For now I will include it in the object even if TS complains, or better, update types.ts later.
-        // Actually, let's map it, and I'll update types.ts in a separate step to be safe.
-        // properties not in interface will just be extra. 
-    } as any;
+        updated_at: row.updated_at
+    };
 };
 
 export async function fetchEntries(filters: EntryFilters = {}): Promise<Entry[]> {
@@ -95,8 +114,7 @@ export async function fetchEntries(filters: EntryFilters = {}): Promise<Entry[]>
 
 export async function fetchEntry(id: number): Promise<Entry> {
     const db = await getDBConnection();
-    const sql = 'SELECT * FROM entries WHERE id = ?';
-    const { values } = await db.query(sql, [id]);
+    const { values } = await db.query('SELECT * FROM entries WHERE id = ?', [id]);
 
     if (values && values.length > 0) {
         return mapRowToEntry(values[0]);
@@ -111,7 +129,7 @@ export async function createEntry(data: CreateEntryData): Promise<Entry> {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
-    const params = [
+    const result = await db.run(sql, [
         data.date,
         data.time,
         data.mood,
@@ -120,11 +138,9 @@ export async function createEntry(data: CreateEntryData): Promise<Entry> {
         JSON.stringify(data.tags || []),
         data.location || '',
         JSON.stringify(data.images || [])
-    ];
+    ]);
 
-    const result = await db.run(sql, params);
     const id = result.changes?.lastId;
-
     if (!id) throw new Error('Failed to create entry');
 
     return fetchEntry(id);
@@ -132,6 +148,7 @@ export async function createEntry(data: CreateEntryData): Promise<Entry> {
 
 export async function updateEntry(id: number, data: UpdateEntryData): Promise<Entry> {
     const db = await getDBConnection();
+    const existing = await fetchEntry(id);
     const setClauses: string[] = [];
     const params: any[] = [];
 
@@ -144,37 +161,44 @@ export async function updateEntry(id: number, data: UpdateEntryData): Promise<En
     if (data.location !== undefined) { setClauses.push('location = ?'); params.push(data.location); }
     if (data.images !== undefined) { setClauses.push('images = ?'); params.push(JSON.stringify(data.images)); }
 
-    if (setClauses.length === 0) return fetchEntry(id);
+    if (setClauses.length === 0) return existing;
 
     setClauses.push('updated_at = datetime("now", "localtime")');
-
-    const sql = `UPDATE entries SET ${setClauses.join(', ')} WHERE id = ?`;
     params.push(id);
 
-    await db.run(sql, params);
+    await db.run(`UPDATE entries SET ${setClauses.join(', ')} WHERE id = ?`, params);
+
+    if (data.images !== undefined) {
+        const nextImages = new Set(data.images);
+        const removed = (existing.images || []).filter(img => !nextImages.has(img));
+        await removeImages(removed);
+    }
+
     return fetchEntry(id);
 }
 
 export async function deleteEntry(id: number): Promise<void> {
     const db = await getDBConnection();
+    const existing = await fetchEntry(id);
+
     await db.run('DELETE FROM entries WHERE id = ?', [id]);
+    await removeImages(existing.images || []);
 }
 
 export async function searchEntries(query: string): Promise<Entry[]> {
     const db = await getDBConnection();
-    const sql = `
-        SELECT * FROM entries 
-        WHERE title LIKE ? OR content LIKE ? OR location LIKE ?
-        ORDER BY date DESC, time DESC
-    `;
     const searchTerm = `%${query}%`;
-    const { values } = await db.query(sql, [searchTerm, searchTerm, searchTerm]);
+    const { values } = await db.query(
+        `SELECT * FROM entries
+         WHERE title LIKE ? OR content LIKE ? OR location LIKE ?
+         ORDER BY date DESC, time DESC`,
+        [searchTerm, searchTerm, searchTerm]
+    );
     return (values || []).map(mapRowToEntry);
 }
 
 export async function fetchEntriesByDate(date: string): Promise<Entry[]> {
     const db = await getDBConnection();
-    const sql = 'SELECT * FROM entries WHERE date = ? ORDER BY time DESC';
-    const { values } = await db.query(sql, [date]);
+    const { values } = await db.query('SELECT * FROM entries WHERE date = ? ORDER BY time DESC', [date]);
     return (values || []).map(mapRowToEntry);
 }

@@ -1,4 +1,5 @@
 import { getDBConnection } from './database';
+import { toLocalDateString } from '../utils/date';
 
 export interface MoodDistribution {
     positive: number;
@@ -65,7 +66,7 @@ export async function fetchStats(): Promise<StatsData> {
     for (let i = 6; i >= 0; i--) {
         const d = new Date();
         d.setDate(d.getDate() - i);
-        const dateStr = d.toISOString().split('T')[0];
+        const dateStr = toLocalDateString(d);
         dates.push(dateStr);
         trendMap.set(dateStr, 0);
     }
@@ -99,10 +100,10 @@ export async function fetchStats(): Promise<StatsData> {
     let streak = 0;
     if (datesRes.values && datesRes.values.length > 0) {
         const uniqueDates = datesRes.values.map(r => r.date);
-        const today = new Date().toISOString().split('T')[0];
+        const today = toLocalDateString(new Date());
         const yesterday = new Date();
         yesterday.setDate(yesterday.getDate() - 1);
-        const yesterdayStr = yesterday.toISOString().split('T')[0];
+        const yesterdayStr = toLocalDateString(yesterday);
 
         // Check if latest is today or yesterday
         let currentIndex = 0;
@@ -122,7 +123,7 @@ export async function fetchStats(): Promise<StatsData> {
 
             while (currentIndex < uniqueDates.length) {
                 expectedDate.setDate(expectedDate.getDate() - 1);
-                const expectedStr = expectedDate.toISOString().split('T')[0];
+                const expectedStr = toLocalDateString(expectedDate);
 
                 if (uniqueDates[currentIndex] === expectedStr) {
                     streak++;
@@ -141,3 +142,4 @@ export async function fetchStats(): Promise<StatsData> {
         weekly_trend: weeklyTrend
     };
 }
+

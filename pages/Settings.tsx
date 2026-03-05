@@ -6,7 +6,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '../components/Icon';
 import { THEMES, toggleDarkMode, applyTheme, DarkModeOption } from '../theme';
-import { exportData, fetchSettings, SettingsData } from '../services';
+import { exportData, fetchSettings, updateSettings, SettingsData } from '../services';
 
 export const Settings: React.FC = () => {
   const navigate = useNavigate();
@@ -16,10 +16,13 @@ export const Settings: React.FC = () => {
   const [showDarkModePicker, setShowDarkModePicker] = useState(false);
   const [exporting, setExporting] = useState<string | null>(null);
   const [remindersText, setRemindersText] = useState('加载中...');
+  const [showApiKeyInput, setShowApiKeyInput] = useState(false);
+  const [amapKey, setAmapKey] = useState('');
 
   useEffect(() => {
     // 同步状态与 localStorage
-    const savedDarkMode = (localStorage.getItem('darkMode') || 'system') as DarkModeOption;
+    const rawDarkMode = localStorage.getItem('darkMode');
+    const savedDarkMode: DarkModeOption = rawDarkMode === 'light' || rawDarkMode === 'dark' || rawDarkMode === 'system' ? rawDarkMode : 'system';
     setDarkMode(savedDarkMode);
 
     const savedTheme = localStorage.getItem('themeId') || 'classic';
@@ -37,8 +40,20 @@ export const Settings: React.FC = () => {
         const count = settings.reminders?.filter(r => r.enabled).length || 0;
         setRemindersText(count > 0 ? `已开启 ${count} 个提醒` : '暂无提醒');
       }
+      if (settings.amap_key) {
+        setAmapKey(settings.amap_key);
+      }
     } catch (error) {
       setRemindersText('配置');
+    }
+  };
+
+  const saveAmapKey = async () => {
+    try {
+      await updateSettings({ amap_key: amapKey.trim() });
+      alert('✅ Key 已保存');
+    } catch (error) {
+      alert('保存失败');
     }
   };
 
@@ -290,7 +305,7 @@ export const Settings: React.FC = () => {
             </button>
             <button
               className="flex w-full items-center justify-between p-4 transition-colors cursor-pointer active:bg-gray-50 dark:active:bg-gray-700/50"
-              onClick={() => window.open('https://github.com/qup1010/MoodListener/issues/new', '_blank')}
+              onClick={() => window.open('https://github.com/qup1010/MoodListener/issues/new', '_blank', 'noopener,noreferrer')}
             >
               <div className="flex items-center gap-3">
                 <div className="size-9 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-orange-600 dark:text-orange-400 transition-colors">
@@ -310,7 +325,7 @@ export const Settings: React.FC = () => {
       <div className="mt-auto px-4 pb-8">
         <div className="flex items-center justify-center gap-2 p-3 rounded-xl bg-primary/5 dark:bg-white/5 border border-primary/10 dark:border-white/10">
           <Icon name="verified_user" className="text-primary dark:text-mood-neutral text-[14px]" />
-          <span className="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest leading-none">本地加密存储 已开启</span>
+          <span className="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest leading-none">本地存储 已开启</span>
         </div>
       </div>
     </div>

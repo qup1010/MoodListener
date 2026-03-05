@@ -5,8 +5,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '../components/Icon';
-import { createEntry, fetchTagsByMood, uploadImage, Tag } from '../services';
+import { createEntry, fetchTagsByMood, uploadImage, fetchSettings, Tag } from '../services';
 import { MoodType } from '../types';
+import { toLocalDateString } from '../src/utils/date';
 
 export const RecordMood: React.FC = () => {
   const navigate = useNavigate();
@@ -132,6 +133,11 @@ export const RecordMood: React.FC = () => {
         maximumAge: 0
       });
 
+      // 获取设置中的 Key
+      // 使用统一的 API 获取设置，确保兼容 Native 和 Web
+      const settings = await fetchSettings();
+      const amapKey = settings.amap_key;
+
       console.log('[Location] Position obtained:', position.coords);
       const { latitude, longitude } = position.coords;
       const coords = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
@@ -139,82 +145,58 @@ export const RecordMood: React.FC = () => {
       // 先设置坐标，即使地理编码失败也有基本信息
       setDetails(prev => ({ ...prev, location: coords }));
 
-      // 使用 BigDataCloud 免费逆地理编码 API（完全免费，无需key）
-      console.log('[Location] Fetching address from BigDataCloud...');
+      console.log('[Location] Fetching address...');
 
       try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 5000);
+        let locationName = '';
 
-        // BigDataCloud 免费API - 支持中文
-        const apiUrl = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=zh`;
+        if (amapKey) {
+          // 使用高德逆地理编码
+          console.log('[Location] Using Amap API');
+          const apiUrl = `https://restapi.amap.com/v3/geocode/regeo?key=${amapKey}&location=${longitude},${latitude}&radius=1000&extensions=base`;
 
-        const response = await fetch(apiUrl, {
-          signal: controller.signal
-        });
-
-        clearTimeout(timeoutId);
-
-        if (response.ok) {
+          const response = await fetch(apiUrl, { signal: controller.signal });
+          clearTimeout(timeoutId);
           const data = await response.json();
-          console.log('[Location] BigDataCloud response:', data);
 
-          // 构建中文地址
-          let locationName = '';
-          const parts = [];
+          if (data.status === '1' && data.regeocode) {
+            locationName = data.regeocode.formatted_address;
+            // 简化地址：只保留区/县及之后的部分，或者街道信息
+            const addressComponent = data.regeocode.addressComponent;
+            if (addressComponent) {
+              const district = addressComponent.district || '';
+              const township = addressComponent.township || '';
+              const streetNumber = addressComponent.streetNumber?.street || '';
+              const building = addressComponent.building?.name || '';
 
-          // BigDataCloud 返回的字段
-          if (data.locality) parts.push(data.locality); // 街道/社区
-          if (data.localityInfo?.administrative?.length > 0) {
-            // 获取区/市
-            const admin = data.localityInfo.administrative;
-            if (admin[3]?.name) parts.push(admin[3].name); // 区
-            if (admin[4]?.name && admin[4].name !== admin[3]?.name) {
-              parts.push(admin[4].name); // 市
+              if (building) locationName = `${district} ${building}`;
+              else if (streetNumber) locationName = `${district} ${streetNumber}`;
+              else locationName = `${district} ${township}`;
             }
-          }
-
-          if (parts.length > 0) {
-            locationName = parts.join(', ');
-          } else if (data.city) {
-            // 降级方案：只有城市名
-            locationName = data.city + (data.countryName ? `, ${data.countryName}` : '');
           } else {
-            locationName = coords;
-          }
-
-          console.log('[Location] Final location name:', locationName);
-          setDetails(prev => ({ ...prev, location: locationName }));
-
-          // 询问用户是否要自定义位置名称
-          if (confirm(`✅ 已获取位置:\n${locationName}\n\n是否要自定义位置名称？`)) {
-            const customLocation = prompt('请输入自定义位置名称:', locationName);
-            if (customLocation && customLocation.trim()) {
-              setDetails(prev => ({ ...prev, location: customLocation.trim() }));
-              alert('✅ 位置已更新');
-            }
+            throw new Error('Amap API failed: ' + data.info);
           }
         } else {
-          console.log('[Location] API request failed');
-          // 直接提供手动输入选项
-          if (confirm(`已获取GPS坐标:\n${coords}\n\n地址解析失败，是否手动输入位置？`)) {
-            const customLocation = prompt('请输入位置名称:', '');
-            if (customLocation && customLocation.trim()) {
-              setDetails(prev => ({ ...prev, location: customLocation.trim() }));
-              alert('✅ 位置已设置');
-            }
-          }
+          // 隐私优先：未配置自有 Key 时，不上传经纬度到第三方服务
+          clearTimeout(timeoutId);
+          locationName = coords;
         }
+        console.log('[Location] Final location name:', locationName);
+        setDetails(prev => ({ ...prev, location: locationName }));
+
       } catch (geoError: any) {
         // 地理编码失败不影响功能，坐标已经设置了
         console.log('[Location] Geocoding failed:', geoError.message);
 
         // 提供手动输入选项
-        if (confirm(`已获取GPS坐标:\n${coords}\n\n地址解析${geoError.name === 'AbortError' ? '超时' : '失败'}，是否手动输入位置？`)) {
+        const isTimeout = geoError.name === 'AbortError' || geoError.message?.includes('timeout');
+        if (confirm(`已获取GPS坐标:\n${coords}\n\n地址解析${isTimeout ? '超时' : '失败'}，是否手动输入位置？`)) {
           const customLocation = prompt('请输入位置名称:', '');
           if (customLocation && customLocation.trim()) {
             setDetails(prev => ({ ...prev, location: customLocation.trim() }));
-            alert('✅ 位置已设置');
+            // alert('✅ 位置已设置'); // Removed annoying alert
           }
         }
       }
@@ -238,7 +220,7 @@ export const RecordMood: React.FC = () => {
         const customLocation = prompt('请输入位置名称:', '');
         if (customLocation && customLocation.trim()) {
           setDetails(prev => ({ ...prev, location: customLocation.trim() }));
-          alert('✅ 位置已设置');
+          // alert('✅ 位置已设置'); // Removed annoying alert
         }
       }
     } finally {
@@ -256,7 +238,7 @@ export const RecordMood: React.FC = () => {
     setSaving(true);
     try {
       const now = new Date();
-      const date = now.toISOString().split('T')[0]; // YYYY-MM-DD
+      const date = toLocalDateString(now); // YYYY-MM-DD (local)
       const time = now.toTimeString().slice(0, 5);  // HH:mm
 
       // 根据选择的标签生成标题
@@ -355,7 +337,15 @@ export const RecordMood: React.FC = () => {
 
         {/* 标签选择 */}
         <section>
-          <h3 className="text-[#121617] dark:text-white text-lg font-bold leading-tight mb-4">选择情绪标签</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-[#121617] dark:text-white text-lg font-bold leading-tight">选择情绪标签</h3>
+            <button
+              onClick={() => navigate('/settings/tags')}
+              className="text-sm font-medium text-primary dark:text-mood-neutral hover:opacity-80 active:scale-95 transition-transform"
+            >
+              管理
+            </button>
+          </div>
           <div className="flex flex-wrap gap-2">
             {availableTags.length > 0 ? (
               availableTags.map(tag => {
@@ -544,3 +534,4 @@ export const RecordMood: React.FC = () => {
     </div>
   );
 };
+

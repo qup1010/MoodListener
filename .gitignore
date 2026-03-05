@@ -59,3 +59,8 @@ __pycache__/
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+
+# Android signing
+*.jks
+*.keystore
+android/keystore.properties

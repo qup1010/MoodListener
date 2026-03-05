@@ -19,14 +19,29 @@ let settingsStorage: any = null;
 let tagsStorage: any = null;
 let filesStorage: any = null;
 
-if (isNative) {
-    // 原生环境：使用 SQLite
-    import('../src/storage/entries').then(m => entriesStorage = m);
-    import('../src/storage/stats').then(m => statsStorage = m);
-    import('../src/storage/settings').then(m => settingsStorage = m);
-    import('../src/storage/tags').then(m => tagsStorage = m);
-    import('../src/storage/files').then(m => filesStorage = m);
-}
+let nativeStorageReady: Promise<void> | null = null;
+
+const ensureNativeStorageReady = async () => {
+    if (!isNative) return;
+
+    if (!nativeStorageReady) {
+        nativeStorageReady = Promise.all([
+            import('../src/storage/entries'),
+            import('../src/storage/stats'),
+            import('../src/storage/settings'),
+            import('../src/storage/tags'),
+            import('../src/storage/files')
+        ]).then(([entriesModule, statsModule, settingsModule, tagsModule, filesModule]) => {
+            entriesStorage = entriesModule;
+            statsStorage = statsModule;
+            settingsStorage = settingsModule;
+            tagsStorage = tagsModule;
+            filesStorage = filesModule;
+        });
+    }
+
+    await nativeStorageReady;
+};
 
 export interface CreateEntryData {
     date: string;
@@ -92,6 +107,8 @@ export interface SettingsData {
     reminders: Reminder[];
     theme_id: string;
     dark_mode: boolean;
+    dark_mode_option?: 'light' | 'dark' | 'system';
+    amap_key?: string;
 }
 
 export interface UpdateSettingsData {
@@ -99,6 +116,8 @@ export interface UpdateSettingsData {
     reminders?: Reminder[];
     theme_id?: string;
     dark_mode?: boolean;
+    dark_mode_option?: 'light' | 'dark' | 'system';
+    amap_key?: string;
 }
 
 export interface UserProfile {
@@ -138,49 +157,56 @@ export interface UploadResult {
 // ==================== Entry API ====================
 
 export async function fetchEntries(filters: EntryFilters = {}): Promise<Entry[]> {
-    if (isNative && entriesStorage) {
+    if (isNative) {
+        await ensureNativeStorageReady();
         return entriesStorage.fetchEntries(filters);
     }
     return webStorage.webFetchEntries(filters);
 }
 
 export async function fetchEntry(id: number): Promise<Entry> {
-    if (isNative && entriesStorage) {
+    if (isNative) {
+        await ensureNativeStorageReady();
         return entriesStorage.fetchEntry(id);
     }
     return webStorage.webFetchEntry(id);
 }
 
 export async function fetchEntriesByDate(date: string): Promise<Entry[]> {
-    if (isNative && entriesStorage) {
+    if (isNative) {
+        await ensureNativeStorageReady();
         return entriesStorage.fetchEntriesByDate(date);
     }
     return webStorage.webFetchEntriesByDate(date);
 }
 
 export async function searchEntries(query: string): Promise<Entry[]> {
-    if (isNative && entriesStorage) {
+    if (isNative) {
+        await ensureNativeStorageReady();
         return entriesStorage.searchEntries(query);
     }
     return webStorage.webSearchEntries(query);
 }
 
 export async function createEntry(data: CreateEntryData): Promise<Entry> {
-    if (isNative && entriesStorage) {
+    if (isNative) {
+        await ensureNativeStorageReady();
         return entriesStorage.createEntry(data);
     }
     return webStorage.webCreateEntry(data);
 }
 
 export async function updateEntry(id: number, data: UpdateEntryData): Promise<Entry> {
-    if (isNative && entriesStorage) {
+    if (isNative) {
+        await ensureNativeStorageReady();
         return entriesStorage.updateEntry(id, data);
     }
     return webStorage.webUpdateEntry(id, data);
 }
 
 export async function deleteEntry(id: number): Promise<void> {
-    if (isNative && entriesStorage) {
+    if (isNative) {
+        await ensureNativeStorageReady();
         return entriesStorage.deleteEntry(id);
     }
     return webStorage.webDeleteEntry(id);
@@ -189,7 +215,8 @@ export async function deleteEntry(id: number): Promise<void> {
 // ==================== Stats API ====================
 
 export async function fetchStats(): Promise<StatsData> {
-    if (isNative && statsStorage) {
+    if (isNative) {
+        await ensureNativeStorageReady();
         return statsStorage.fetchStats();
     }
     return webStorage.webFetchStats();
@@ -198,14 +225,16 @@ export async function fetchStats(): Promise<StatsData> {
 // ==================== Settings API ====================
 
 export async function fetchSettings(): Promise<SettingsData> {
-    if (isNative && settingsStorage) {
+    if (isNative) {
+        await ensureNativeStorageReady();
         return settingsStorage.fetchSettings();
     }
     return webStorage.webFetchSettings();
 }
 
 export async function updateSettings(data: UpdateSettingsData): Promise<SettingsData> {
-    if (isNative && settingsStorage) {
+    if (isNative) {
+        await ensureNativeStorageReady();
         return settingsStorage.updateSettings(data);
     }
     return webStorage.webUpdateSettings(data);
@@ -213,7 +242,16 @@ export async function updateSettings(data: UpdateSettingsData): Promise<Settings
 
 // ==================== Export API ====================
 
+
 type ExportFormat = 'csv' | 'json' | 'txt';
+
+const sanitizeForCsv = (value: string): string => {
+    const normalized = value.replace(/\r?\n|\r/g, ' ');
+    const escaped = normalized.replace(/"/g, '""');
+    const trimmed = escaped.trimStart();
+    const dangerous = ['=', '+', '-', '@'];
+    return dangerous.some(prefix => trimmed.startsWith(prefix)) ? `'${escaped}` : escaped;
+};
 
 export async function exportData(format: ExportFormat): Promise<void> {
     const entries = await fetchEntries();
@@ -223,7 +261,9 @@ export async function exportData(format: ExportFormat): Promise<void> {
         content = JSON.stringify(entries, null, 2);
     } else if (format === 'csv') {
         content = 'Date,Time,Mood,Title,Content\n' +
-            entries.map(e => `${e.date},${e.time},${e.mood},"${e.title}","${e.content || ''}"`).join('\n');
+            entries
+                .map(e => `${sanitizeForCsv(e.date)},${sanitizeForCsv(e.time)},${sanitizeForCsv(e.mood)},"${sanitizeForCsv(e.title)}","${sanitizeForCsv(e.content || '')}"` )
+                .join('\n');
     } else {
         content = entries.map(e => `[${e.date} ${e.time}] ${e.mood} - ${e.title}\n${e.content || ''}`).join('\n\n');
     }
@@ -253,14 +293,16 @@ export async function exportData(format: ExportFormat): Promise<void> {
 // ==================== Profile API ====================
 
 export async function fetchProfile(): Promise<UserProfile> {
-    if (isNative && settingsStorage) {
+    if (isNative) {
+        await ensureNativeStorageReady();
         return settingsStorage.fetchProfile();
     }
     return webStorage.webFetchProfile();
 }
 
 export async function updateProfile(data: UpdateProfileData): Promise<UserProfile> {
-    if (isNative && settingsStorage) {
+    if (isNative) {
+        await ensureNativeStorageReady();
         return settingsStorage.updateProfile(data);
     }
     return webStorage.webUpdateProfile(data);
@@ -269,28 +311,32 @@ export async function updateProfile(data: UpdateProfileData): Promise<UserProfil
 // ==================== Tags API ====================
 
 export async function fetchTags(): Promise<TagsByMood> {
-    if (isNative && tagsStorage) {
+    if (isNative) {
+        await ensureNativeStorageReady();
         return tagsStorage.fetchTags();
     }
     return webStorage.webFetchTags();
 }
 
 export async function fetchTagsByMood(moodType: MoodType): Promise<Tag[]> {
-    if (isNative && tagsStorage) {
+    if (isNative) {
+        await ensureNativeStorageReady();
         return tagsStorage.fetchTagsByMood(moodType);
     }
     return webStorage.webFetchTagsByMood(moodType);
 }
 
 export async function createTag(data: CreateTagData): Promise<Tag> {
-    if (isNative && tagsStorage) {
+    if (isNative) {
+        await ensureNativeStorageReady();
         return tagsStorage.createTag(data);
     }
     return webStorage.webCreateTag(data);
 }
 
 export async function deleteTag(id: number): Promise<void> {
-    if (isNative && tagsStorage) {
+    if (isNative) {
+        await ensureNativeStorageReady();
         return tagsStorage.deleteTag(id);
     }
     return webStorage.webDeleteTag(id);
@@ -338,7 +384,8 @@ async function compressImage(file: File, maxWidth = 800, quality = 0.7): Promise
 }
 
 export async function uploadImage(file: File): Promise<UploadResult> {
-    if (isNative && filesStorage) {
+    if (isNative) {
+        await ensureNativeStorageReady();
         return filesStorage.saveImage(file);
     }
     // Web: 压缩图片后使用 Data URL

@@ -1,27 +1,57 @@
-@import "tailwindcss";
-
-/* 配置 Tailwind 使用 class 选择器策略（而非媒体查询） */
+﻿@import "tailwindcss";
 @custom-variant dark (&:where(.dark, .dark *));
 
-@theme {
-  --color-primary: rgb(194 148 62);
-  --color-primary-dark: rgb(42 74 76);
-  --color-background-light: #f8f7f6;
-  --color-background-dark: #1e1b14;
-  --color-card-dark: #28313D;
+@theme inline {
+  --color-primary: rgb(var(--app-primary));
+  --color-primary-dark: rgb(var(--app-primary-dark));
+  --color-background-light: var(--app-background-light);
+  --color-background-dark: var(--app-background-dark);
+  --color-card-dark: var(--app-card-dark);
+  --color-mood-positive: var(--app-mood-positive);
+  --color-mood-neutral: var(--app-mood-neutral);
+  --color-mood-negative: var(--app-mood-negative);
+  --color-mood-positive-soft: var(--app-mood-positive-soft);
+  --color-mood-neutral-soft: var(--app-mood-neutral-soft);
+  --color-mood-negative-soft: var(--app-mood-negative-soft);
+  --color-mood-highlight: var(--app-mood-highlight);
+  --font-display: "Manrope", sans-serif;
+  --shadow-soft: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+  --shadow-glow: 0 0 15px rgba(53, 92, 95, 0.1);
+}
+:root {
+  --sat: env(safe-area-inset-top);
+  --sab: env(safe-area-inset-bottom);
 
-  --color-mood-positive: #4ADE80;
-  --color-mood-neutral: #FACC15;
-  --color-mood-negative: #F87171;
-  --color-mood-positive-soft: #F5928C;
-  --color-mood-neutral-soft: #A2D9CE;
-  --color-mood-negative-soft: #6B4F5E;
-  --color-mood-highlight: #F2C46B;
+  /* Theme Variables */
+  --app-primary: 194 148 62;
+  --app-primary-dark: 42 74 76;
+  --app-background-light: #f8f7f6;
+  --app-background-dark: #1e1b14;
+  --app-card-dark: #28313D;
+
+  --app-mood-positive: #4ADE80;
+  --app-mood-neutral: #FACC15;
+  --app-mood-negative: #F87171;
+  --app-mood-positive-soft: #F5928C;
+  --app-mood-neutral-soft: #A2D9CE;
+  --app-mood-negative-soft: #6B4F5E;
+  --app-mood-highlight: #F2C46B;
 
   --font-display: "Manrope", sans-serif;
 
   --shadow-soft: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
   --shadow-glow: 0 0 15px rgba(53, 92, 95, 0.1);
+}
+
+body {
+  padding-top: var(--sat);
+  padding-bottom: var(--sab);
+}
+
+/* Dark mode handling */
+.dark body {
+  background-color: var(--app-background-dark);
+  color: #fff;
 }
 
 /* 主题颜色由 JavaScript 动态设置 */
@@ -65,6 +95,7 @@ body {
   word-wrap: normal;
   direction: ltr;
   -webkit-font-feature-settings: 'liga';
+  font-feature-settings: 'liga';
   -webkit-font-smoothing: antialiased;
 }
 
@@ -128,3 +159,5 @@ body {
   src: url(./src/assets/fonts/Manrope/Manrope_5.woff2) format('woff2');
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
+
+

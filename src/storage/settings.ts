@@ -14,6 +14,8 @@ export interface SettingsData {
     reminders: Reminder[];
     theme_id: string;
     dark_mode: boolean;
+    dark_mode_option: 'light' | 'dark' | 'system';
+    amap_key?: string;
 }
 
 export interface UpdateSettingsData {
@@ -22,6 +24,8 @@ export interface UpdateSettingsData {
     reminders?: Reminder[];
     theme_id?: string;
     dark_mode?: boolean;
+    dark_mode_option?: 'light' | 'dark' | 'system';
+    amap_key?: string;
 }
 
 export interface UserProfile {
@@ -35,7 +39,6 @@ export interface UpdateProfileData {
     avatar_url?: string;
 }
 
-// Settings
 export async function fetchSettings(): Promise<SettingsData> {
     const db = await getDBConnection();
     const { values } = await db.query('SELECT * FROM settings WHERE id = 1');
@@ -44,7 +47,6 @@ export async function fetchSettings(): Promise<SettingsData> {
         const row = values[0];
         let reminders: Reminder[] = [];
 
-        // 解析 reminders JSON 字段
         if (row.reminders) {
             try {
                 reminders = JSON.parse(row.reminders);
@@ -53,7 +55,6 @@ export async function fetchSettings(): Promise<SettingsData> {
             }
         }
 
-        // 兼容旧数据：如果没有 reminders 但有 notification_time
         if (reminders.length === 0 && row.notification_time) {
             reminders = [{
                 id: '1',
@@ -63,24 +64,30 @@ export async function fetchSettings(): Promise<SettingsData> {
             }];
         }
 
+        const darkModeOption = row.dark_mode_option === 'light' || row.dark_mode_option === 'dark' || row.dark_mode_option === 'system'
+            ? row.dark_mode_option
+            : (!!row.dark_mode ? 'dark' : 'light');
+
         return {
             id: row.id,
             notification_enabled: !!row.notification_enabled,
             notification_time: row.notification_time,
-            reminders: reminders,
+            reminders,
             theme_id: row.theme_id,
-            dark_mode: !!row.dark_mode
+            dark_mode: !!row.dark_mode,
+            dark_mode_option: darkModeOption,
+            amap_key: row.amap_key
         };
     }
 
-    // 如果不存在（理论上不应该，因为 database.ts 里有初始化），返回默认值
     return {
         id: 1,
         notification_enabled: true,
-        notification_time: "20:00",
+        notification_time: '20:00',
         reminders: [{ id: '1', time: '20:00', enabled: true, days: [1, 2, 3, 4, 5, 6, 7] }],
-        theme_id: "classic",
-        dark_mode: false
+        theme_id: 'classic',
+        dark_mode: false,
+        dark_mode_option: 'system'
     };
 }
 
@@ -109,6 +116,14 @@ export async function updateSettings(data: UpdateSettingsData): Promise<Settings
         setClauses.push('dark_mode = ?');
         params.push(data.dark_mode ? 1 : 0);
     }
+    if (data.dark_mode_option !== undefined) {
+        setClauses.push('dark_mode_option = ?');
+        params.push(data.dark_mode_option);
+    }
+    if (data.amap_key !== undefined) {
+        setClauses.push('amap_key = ?');
+        params.push(data.amap_key);
+    }
 
     if (setClauses.length > 0) {
         const sql = `UPDATE settings SET ${setClauses.join(', ')} WHERE id = 1`;
@@ -118,7 +133,6 @@ export async function updateSettings(data: UpdateSettingsData): Promise<Settings
     return fetchSettings();
 }
 
-// Profile
 export async function fetchProfile(): Promise<UserProfile> {
     const db = await getDBConnection();
     const { values } = await db.query('SELECT * FROM user_profile WHERE id = 1');
@@ -129,7 +143,7 @@ export async function fetchProfile(): Promise<UserProfile> {
 
     return {
         id: 1,
-        username: "朋友",
+        username: '朋友',
         avatar_url: undefined
     };
 }

@@ -4,6 +4,7 @@
  */
 
 import { Capacitor } from '@capacitor/core';
+import { toLocalDateString } from '../utils/date';
 
 // 检测是否在原生环境中运行
 export const isNativePlatform = () => {
@@ -18,7 +19,9 @@ const DEFAULT_SETTINGS = {
         { id: '1', time: '20:00', enabled: true, days: [1, 2, 3, 4, 5, 6, 7] }
     ],
     theme_id: "classic",
-    dark_mode: false
+    dark_mode: false,
+    dark_mode_option: 'system',
+    amap_key: undefined
 };
 
 const DEFAULT_PROFILE = {
@@ -98,11 +101,11 @@ export function initWebStorage(): void {
 
     // 同步主题设置到 localStorage（供 theme.ts 使用）
     const settings = getItem(KEYS.SETTINGS, DEFAULT_SETTINGS);
-    if (settings.dark_mode !== undefined) {
-        // 保持现有的 darkMode 设置，不覆盖用户选择
-        if (!localStorage.getItem('darkMode')) {
-            localStorage.setItem('darkMode', settings.dark_mode ? 'dark' : 'light');
-        }
+    const option = settings.dark_mode_option === 'light' || settings.dark_mode_option === 'dark' || settings.dark_mode_option === 'system'
+        ? settings.dark_mode_option
+        : (settings.dark_mode ? 'dark' : 'light');
+    if (!localStorage.getItem('darkMode')) {
+        localStorage.setItem('darkMode', option);
     }
     if (settings.theme_id && !localStorage.getItem('themeId')) {
         localStorage.setItem('themeId', settings.theme_id);
@@ -312,7 +315,7 @@ export function webFetchStats(): any {
     for (let i = 6; i >= 0; i--) {
         const d = new Date();
         d.setDate(d.getDate() - i);
-        dates.push(d.toISOString().split('T')[0]);
+        dates.push(toLocalDateString(d));
     }
 
     const weeklyTrend = dates.map(date => ({
@@ -324,8 +327,8 @@ export function webFetchStats(): any {
     let streak = 0;
     const uniqueDates = [...new Set(entries.map(e => e.date))].sort().reverse();
     if (uniqueDates.length > 0) {
-        const today = new Date().toISOString().split('T')[0];
-        const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+        const today = toLocalDateString(new Date());
+        const yesterday = toLocalDateString(new Date(Date.now() - 86400000));
 
         if (uniqueDates[0] === today || uniqueDates[0] === yesterday) {
             streak = 1;
@@ -333,7 +336,7 @@ export function webFetchStats(): any {
 
             for (let i = 1; i < uniqueDates.length; i++) {
                 expectedDate.setDate(expectedDate.getDate() - 1);
-                const expectedStr = expectedDate.toISOString().split('T')[0];
+                const expectedStr = toLocalDateString(expectedDate);
                 if (uniqueDates[i] === expectedStr) {
                     streak++;
                 } else {
@@ -350,3 +353,5 @@ export function webFetchStats(): any {
         weekly_trend: weeklyTrend
     };
 }
+
+

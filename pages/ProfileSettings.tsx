@@ -7,16 +7,24 @@ import { useNavigate } from 'react-router-dom';
 import { Icon } from '../components/Icon';
 import { fetchProfile, updateProfile, UserProfile } from '../services';
 
-// 预设头像列表
+const buildAvatarDataUrl = (label: string, background: string) => {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <rect width="128" height="128" rx="64" fill="${background}" />
+  <text x="64" y="74" text-anchor="middle" fill="#ffffff" font-family="system-ui, sans-serif" font-size="44" font-weight="700">${label}</text>
+</svg>`;
+    return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+};
+
+// 本地内置头像（data URL），避免默认向第三方发起请求
 const AVATAR_OPTIONS = [
-    'https://api.dicebear.com/7.x/avataaars/svg?seed=Alex',
-    'https://api.dicebear.com/7.x/avataaars/svg?seed=Sara',
-    'https://api.dicebear.com/7.x/avataaars/svg?seed=Leo',
-    'https://api.dicebear.com/7.x/avataaars/svg?seed=Mia',
-    'https://api.dicebear.com/7.x/avataaars/svg?seed=Zoe',
-    'https://api.dicebear.com/7.x/avataaars/svg?seed=Max',
-    'https://api.dicebear.com/7.x/avataaars/svg?seed=Luna',
-    'https://api.dicebear.com/7.x/avataaars/svg?seed=Kai',
+    buildAvatarDataUrl('A', '#ef4444'),
+    buildAvatarDataUrl('S', '#f97316'),
+    buildAvatarDataUrl('L', '#eab308'),
+    buildAvatarDataUrl('M', '#22c55e'),
+    buildAvatarDataUrl('Z', '#0ea5e9'),
+    buildAvatarDataUrl('K', '#3b82f6'),
+    buildAvatarDataUrl('N', '#8b5cf6'),
+    buildAvatarDataUrl('Q', '#ec4899'),
 ];
 
 export const ProfileSettings: React.FC = () => {
@@ -71,33 +79,6 @@ export const ProfileSettings: React.FC = () => {
         }
     };
 
-    const compressImage = (dataUrl: string, maxSize = 200): Promise<string> => {
-        return new Promise((resolve) => {
-            const img = new Image();
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                // 强制正方形
-                canvas.width = maxSize;
-                canvas.height = maxSize;
-
-                const ctx = canvas.getContext('2d');
-                if (!ctx) {
-                    resolve(dataUrl);
-                    return;
-                }
-
-                // 中心裁剪
-                const minSide = Math.min(img.width, img.height);
-                const sx = (img.width - minSide) / 2;
-                const sy = (img.height - minSide) / 2;
-
-                ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, maxSize, maxSize);
-                resolve(canvas.toDataURL('image/jpeg', 0.8));
-            };
-            img.src = dataUrl;
-        });
-    };
-
     const handlePickFromGallery = async () => {
         console.log('[Avatar] Starting image picker...');
         setShowAvatarPicker(false); // 先关闭选择器
@@ -105,66 +86,39 @@ export const ProfileSettings: React.FC = () => {
         try {
             const { Camera, CameraResultType, CameraSource } = await import('@capacitor/camera');
 
-            // 检查是否有相册权限
-            console.log('[Avatar] Checking permissions...');
+            // 检查 permission
             const permissions = await Camera.checkPermissions();
-            console.log('[Avatar] Permission status:', permissions);
-
-            if (permissions.photos === 'denied') {
-                if (confirm('相册权限已被拒绝。\n\n要选择头像，请前往:\n设置 → 应用 → MoodListener → 权限 → 照片\n\n是否现在前往设置？')) {
-                    alert('请手动在系统设置中开启相册权限');
-                }
-                return;
-            }
-
-            // 如果权限未授予，请求权限
-            if (permissions.photos !== 'granted') {
-                console.log('[Avatar] Requesting permissions...');
-                const requestResult = await Camera.requestPermissions({ permissions: ['photos'] });
-                console.log('[Avatar] Permission request result:', requestResult);
-
-                if (requestResult.photos !== 'granted') {
-                    alert('需要相册权限才能选择头像');
+            if (permissions.photos === 'denied' || permissions.camera === 'denied') {
+                // 尝试请求权限
+                const request = await Camera.requestPermissions();
+                if (request.photos !== 'granted' && request.camera !== 'granted') {
+                    alert('需要相册或相机权限才能更改头像');
                     return;
                 }
             }
 
             console.log('[Avatar] Opening photo picker...');
-
             const image = await Camera.getPhoto({
-                quality: 90,
-                allowEditing: true,
+                quality: 80, // 直接使用 Capacitor 的压缩
+                allowEditing: true, // 允许原生裁剪
                 resultType: CameraResultType.DataUrl,
-                source: CameraSource.Photos,
-                width: 400,
-                height: 400,
-                promptLabelHeader: '选择头像',
+                source: CameraSource.Prompt, // 让用户选择 拍照 或 相册
+                width: 400, // 限制宽度
+                height: 400, // 限制高度
+                promptLabelHeader: '更改头像',
                 promptLabelPhoto: '从相册选择',
                 promptLabelPicture: '拍照'
             });
 
-            console.log('[Avatar] Image selected');
-
             if (image.dataUrl) {
-                console.log('[Avatar] Compressing image...');
-                // 压缩图片
-                const compressed = await compressImage(image.dataUrl);
-                console.log('[Avatar] Image compressed, size:', compressed.length);
-                setAvatarUrl(compressed);
-                alert('✅ 头像已更新');
+                console.log('[Avatar] Image selected, size:', image.dataUrl.length);
+                setAvatarUrl(image.dataUrl);
             }
         } catch (error: any) {
             console.error('[Avatar] Error:', error);
+            if (error.message?.includes('User cancelled')) return;
 
-            // 用户取消选择不算错误
-            if (error.message?.includes('cancel') || error.message?.includes('User cancelled')) {
-                console.log('[Avatar] User cancelled');
-                return;
-            }
-
-            // Web 端降级方案：使用 file input
-            console.log('[Avatar] Falling back to web file picker');
-            alert('⚠️ 相机插件出错，使用备用方案...');
+            // Web fallback
             handleWebFilePicker();
         }
     };
@@ -178,10 +132,9 @@ export const ProfileSettings: React.FC = () => {
             if (!file) return;
 
             const reader = new FileReader();
-            reader.onload = async (event) => {
+            reader.onload = (event) => {
                 const dataUrl = event.target?.result as string;
-                const compressed = await compressImage(dataUrl);
-                setAvatarUrl(compressed);
+                setAvatarUrl(dataUrl);
                 setShowAvatarPicker(false);
             };
             reader.readAsDataURL(file);
@@ -305,3 +258,4 @@ export const ProfileSettings: React.FC = () => {
         </div>
     );
 };
+
