@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     tags:
-      - 'v*'
+      - "v*"
 
 permissions:
   contents: write
@@ -33,7 +33,15 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 17
+          java-version: "21"
+          check-latest: true
+
+      - name: Verify Java toolchain
+        run: |
+          java -version
+          javac -version
+          echo "JAVA_HOME=$JAVA_HOME"
+          echo "ORG_GRADLE_JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
 
       - name: Decode keystore
         run: |
@@ -47,6 +55,14 @@ jobs:
 
       - name: Sync Capacitor Android
         run: npx cap sync android
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x android/gradlew
+
+      - name: Verify Gradle JVM
+        run: |
+          cd android
+          ./gradlew -version
 
       - name: Build release APK
         run: |
