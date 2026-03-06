@@ -1,4 +1,4 @@
-import { getDBConnection } from './database';
+﻿import { getDBConnection } from './database';
 
 export interface Reminder {
     id: string;
@@ -16,6 +16,7 @@ export interface SettingsData {
     dark_mode: boolean;
     dark_mode_option: 'light' | 'dark' | 'system';
     amap_key?: string;
+    weekly_insight_cache: Record<string, any>;
 }
 
 export interface UpdateSettingsData {
@@ -26,6 +27,7 @@ export interface UpdateSettingsData {
     dark_mode?: boolean;
     dark_mode_option?: 'light' | 'dark' | 'system';
     amap_key?: string;
+    weekly_insight_cache?: Record<string, any>;
 }
 
 export interface UserProfile {
@@ -46,12 +48,24 @@ export async function fetchSettings(): Promise<SettingsData> {
     if (values && values.length > 0) {
         const row = values[0];
         let reminders: Reminder[] = [];
+        let weeklyInsightCache: Record<string, any> = {};
 
         if (row.reminders) {
             try {
                 reminders = JSON.parse(row.reminders);
             } catch (e) {
                 console.error('Failed to parse reminders:', e);
+            }
+        }
+
+        if (row.weekly_insight_cache) {
+            try {
+                const parsed = JSON.parse(row.weekly_insight_cache);
+                if (parsed && typeof parsed === 'object') {
+                    weeklyInsightCache = parsed;
+                }
+            } catch (e) {
+                console.error('Failed to parse weekly insight cache:', e);
             }
         }
 
@@ -76,7 +90,8 @@ export async function fetchSettings(): Promise<SettingsData> {
             theme_id: row.theme_id,
             dark_mode: !!row.dark_mode,
             dark_mode_option: darkModeOption,
-            amap_key: row.amap_key
+            amap_key: row.amap_key,
+            weekly_insight_cache: weeklyInsightCache
         };
     }
 
@@ -87,7 +102,8 @@ export async function fetchSettings(): Promise<SettingsData> {
         reminders: [{ id: '1', time: '20:00', enabled: true, days: [1, 2, 3, 4, 5, 6, 7] }],
         theme_id: 'classic',
         dark_mode: false,
-        dark_mode_option: 'system'
+        dark_mode_option: 'system',
+        weekly_insight_cache: {}
     };
 }
 
@@ -123,6 +139,10 @@ export async function updateSettings(data: UpdateSettingsData): Promise<Settings
     if (data.amap_key !== undefined) {
         setClauses.push('amap_key = ?');
         params.push(data.amap_key);
+    }
+    if (data.weekly_insight_cache !== undefined) {
+        setClauses.push('weekly_insight_cache = ?');
+        params.push(JSON.stringify(data.weekly_insight_cache));
     }
 
     if (setClauses.length > 0) {
@@ -169,3 +189,4 @@ export async function updateProfile(data: UpdateProfileData): Promise<UserProfil
 
     return fetchProfile();
 }
+

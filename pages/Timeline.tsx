@@ -8,6 +8,7 @@ import { Icon } from '../components/Icon';
 import { Entry } from '../types';
 import { fetchEntries, searchEntries, deleteEntry } from '../services';
 import { toLocalDateString } from '../src/utils/date';
+import { confirmAction, showToast } from '../src/ui/feedback';
 
 const getMoodColor = (mood: string, type: 'bg' | 'border' | 'icon-text') => {
   const map: Record<string, Record<string, string>> = {
@@ -46,6 +47,7 @@ export const Timeline: React.FC = () => {
   const [filter, setFilter] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
+  const [hasHistoryData, setHasHistoryData] = useState(true);
 
   useEffect(() => {
     if (searchQuery.trim()) {
@@ -58,8 +60,12 @@ export const Timeline: React.FC = () => {
   const loadEntries = async () => {
     try {
       setLoading(true);
-      const data = await fetchEntries(filter ? { mood: filter as 'positive' | 'neutral' | 'negative' } : {});
+      const [data, allData] = await Promise.all([
+        fetchEntries(filter ? { mood: filter as 'positive' | 'neutral' | 'negative' } : {}),
+        fetchEntries()
+      ]);
       setEntries(data);
+      setHasHistoryData(allData.length > 0);
     } catch (error) {
       console.error('加载记录失败:', error);
     } finally {
@@ -76,9 +82,10 @@ export const Timeline: React.FC = () => {
 
     try {
       setIsSearching(true);
-      const data = await searchEntries(query);
+      const [data, allData] = await Promise.all([searchEntries(query), fetchEntries()]);
       const filtered = filter ? data.filter((item) => item.mood === filter) : data;
       setEntries(filtered);
+      setHasHistoryData(allData.length > 0);
     } catch (error) {
       console.error('搜索失败:', error);
     } finally {
@@ -93,14 +100,18 @@ export const Timeline: React.FC = () => {
 
   const handleDelete = async (e: React.MouseEvent, id: number) => {
     e.stopPropagation();
-    if (!confirm('确定要删除这条记录吗？')) return;
+    if (!(await confirmAction({ title: '删除记录', message: '确定要删除这条记录吗？', confirmText: '删除', cancelText: '取消', danger: true }))) return;
 
     try {
       await deleteEntry(id);
-      setEntries((prev) => prev.filter((item) => item.id !== id.toString()));
+      setEntries((prev) => {
+        const next = prev.filter((item) => item.id !== id.toString());
+        setHasHistoryData(next.length > 0);
+        return next;
+      });
     } catch (error) {
       console.error('删除失败:', error);
-      alert('删除失败，请重试');
+      showToast('删除失败，请重试', 'error');
     }
   };
 
@@ -128,64 +139,68 @@ export const Timeline: React.FC = () => {
           </button>
         </div>
 
-        <div className="px-5 pb-3">
-          <div className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all">
-            <Icon name="search" className="text-gray-400" size={20} />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && void handleSearch()}
-              placeholder="搜索标题、内容、地点..."
-              className="flex-1 bg-transparent border-none outline-none text-gray-900 dark:text-white placeholder:text-gray-400 text-sm"
-            />
-            {searchQuery && (
-              <button onClick={() => void clearSearch()} className="text-gray-400 hover:text-gray-600" aria-label="清空搜索">
-                <Icon name="close" size={18} />
-              </button>
-            )}
-          </div>
-        </div>
+        {(hasHistoryData || searchQuery.trim().length > 0) && (
+          <>
+            <div className="px-5 pb-3">
+              <div className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all">
+                <Icon name="search" className="text-gray-400" size={20} />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && void handleSearch()}
+                  placeholder="搜索标题、内容、地点..."
+                  className="flex-1 bg-transparent border-none outline-none text-gray-900 dark:text-white placeholder:text-gray-400 text-sm"
+                />
+                {searchQuery && (
+                  <button onClick={() => void clearSearch()} className="text-gray-400 hover:text-gray-600" aria-label="清空搜索">
+                    <Icon name="close" size={18} />
+                  </button>
+                )}
+              </div>
+            </div>
 
-        <div className="px-5 pb-4 overflow-x-auto no-scrollbar w-full">
-          <div className="flex gap-3 min-w-max">
-            <button
-              className={`flex items-center px-4 py-2 rounded-full transition-transform hover:scale-105 active:scale-95 ${filter === null
-                ? 'bg-primary text-white shadow-glow'
-                : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
-              onClick={() => setFilter(null)}
-            >
-              <span className="text-sm font-semibold">全部时间</span>
-            </button>
-            <button
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-full transition-all ${filter === 'positive'
-                ? 'bg-mood-positive text-white shadow-lg'
-                : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-mood-positive/50'}`}
-              onClick={() => setFilter(filter === 'positive' ? null : 'positive')}
-            >
-              <span className="size-2 rounded-full bg-mood-positive-soft"></span>
-              <span className="text-sm font-medium">积极</span>
-            </button>
-            <button
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-full transition-all ${filter === 'neutral'
-                ? 'bg-mood-neutral text-white shadow-lg'
-                : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-mood-neutral/50'}`}
-              onClick={() => setFilter(filter === 'neutral' ? null : 'neutral')}
-            >
-              <span className="size-2 rounded-full bg-mood-neutral-soft"></span>
-              <span className="text-sm font-medium">平静</span>
-            </button>
-            <button
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-full transition-all ${filter === 'negative'
-                ? 'bg-mood-negative text-white shadow-lg'
-                : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-mood-negative/50'}`}
-              onClick={() => setFilter(filter === 'negative' ? null : 'negative')}
-            >
-              <span className="size-2 rounded-full bg-mood-negative-soft"></span>
-              <span className="text-sm font-medium">消极</span>
-            </button>
-          </div>
-        </div>
+            <div className="px-5 pb-4 overflow-x-auto no-scrollbar w-full">
+              <div className="flex gap-3 min-w-max">
+                <button
+                  className={`flex items-center px-4 py-2 rounded-full transition-transform hover:scale-105 active:scale-95 ${filter === null
+                    ? 'bg-primary text-white shadow-glow'
+                    : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
+                  onClick={() => setFilter(null)}
+                >
+                  <span className="text-sm font-semibold">全部时间</span>
+                </button>
+                <button
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-full transition-all ${filter === 'positive'
+                    ? 'bg-mood-positive text-white shadow-lg'
+                    : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-mood-positive/50'}`}
+                  onClick={() => setFilter(filter === 'positive' ? null : 'positive')}
+                >
+                  <span className="size-2 rounded-full bg-mood-positive-soft"></span>
+                  <span className="text-sm font-medium">积极</span>
+                </button>
+                <button
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-full transition-all ${filter === 'neutral'
+                    ? 'bg-mood-neutral text-white shadow-lg'
+                    : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-mood-neutral/50'}`}
+                  onClick={() => setFilter(filter === 'neutral' ? null : 'neutral')}
+                >
+                  <span className="size-2 rounded-full bg-mood-neutral-soft"></span>
+                  <span className="text-sm font-medium">平静</span>
+                </button>
+                <button
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-full transition-all ${filter === 'negative'
+                    ? 'bg-mood-negative text-white shadow-lg'
+                    : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-mood-negative/50'}`}
+                  onClick={() => setFilter(filter === 'negative' ? null : 'negative')}
+                >
+                  <span className="size-2 rounded-full bg-mood-negative-soft"></span>
+                  <span className="text-sm font-medium">消极</span>
+                </button>
+              </div>
+            </div>
+          </>
+        )}
       </header>
 
       <main className="flex-1 px-5 pt-6 pb-6 overflow-y-auto">
@@ -198,15 +213,9 @@ export const Timeline: React.FC = () => {
             <div className="p-4 rounded-full bg-gray-100 dark:bg-gray-800 mb-3">
               <Icon name={searchQuery ? 'search_off' : 'history_edu'} className="text-gray-400 text-3xl" />
             </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400 font-medium mb-4">{searchQuery ? '没有找到相关记录' : '还没有心情记录'}</p>
-            {!searchQuery && (
-              <button
-                onClick={() => navigate('/record')}
-                className="px-6 py-2 bg-primary text-white rounded-full font-medium shadow-lg shadow-primary/20 hover:scale-105 transition-transform"
-              >
-                开始第一条记录
-              </button>
-            )}
+            <p className="text-sm text-gray-500 dark:text-gray-400 font-medium mb-2">{searchQuery ? '没有找到相关记录' : '还没有心情记录'}</p>
+            {!searchQuery && <p className="text-xs text-gray-400 mb-4">先写下一条记录，时间线会在这里展开。</p>}
+            {!searchQuery && <p className="text-xs text-gray-400">可通过右下角按钮开始记录</p>}
           </div>
         ) : (
           <div className="relative">

@@ -1,4 +1,4 @@
-Ôªø@import "tailwindcss";
+@import "tailwindcss";
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme inline {
@@ -17,12 +17,27 @@
   --font-display: "Manrope", sans-serif;
   --shadow-soft: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
   --shadow-glow: 0 0 15px rgba(53, 92, 95, 0.1);
+
+  --ui-brand-primary: #c2943e;
+  --ui-brand-primary-strong: #355c5f;
+  --ui-surface-page-light: #f8f7f6;
+  --ui-surface-page-dark: #1e1b14;
+  --ui-surface-card-light: #ffffff;
+  --ui-surface-card-dark: #28313D;
+  --ui-text-primary-light: #121617;
+  --ui-text-primary-dark: #f5f5f5;
+  --ui-text-secondary-light: #6b7280;
+  --ui-text-secondary-dark: #9ca3af;
+  --ui-accent-subtle-light: #f7f3ea;
+  --ui-accent-subtle-dark: #2a2a2a;
+  --ui-mood-positive: #4ade80;
+  --ui-mood-neutral: #facc15;
+  --ui-mood-negative: #f87171;
 }
 :root {
   --sat: env(safe-area-inset-top);
   --sab: env(safe-area-inset-bottom);
 
-  /* Theme Variables */
   --app-primary: 194 148 62;
   --app-primary-dark: 42 74 76;
   --app-background-light: #f8f7f6;
@@ -38,14 +53,29 @@
   --app-mood-highlight: #F2C46B;
 
   --font-display: "Manrope", sans-serif;
-
   --shadow-soft: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
   --shadow-glow: 0 0 15px rgba(53, 92, 95, 0.1);
-}
 
+  --ui-brand-primary: #c2943e;
+  --ui-brand-primary-strong: #355c5f;
+  --ui-surface-page-light: #f8f7f6;
+  --ui-surface-page-dark: #1e1b14;
+  --ui-surface-card-light: #ffffff;
+  --ui-surface-card-dark: #28313D;
+  --ui-text-primary-light: #121617;
+  --ui-text-primary-dark: #f5f5f5;
+  --ui-text-secondary-light: #6b7280;
+  --ui-text-secondary-dark: #9ca3af;
+  --ui-accent-subtle-light: #f7f3ea;
+  --ui-accent-subtle-dark: #2a2a2a;
+  --ui-mood-positive: #4ade80;
+  --ui-mood-neutral: #facc15;
+  --ui-mood-negative: #f87171;
+}
 body {
   padding-top: var(--sat);
   padding-bottom: var(--sab);
+  -webkit-font-smoothing: antialiased;
 }
 
 /* Dark mode handling */
@@ -54,7 +84,7 @@ body {
   color: #fff;
 }
 
-/* ‰∏ªÈ¢òÈ¢úËâ≤Áî± JavaScript Âä®ÊÄÅËÆæÁΩÆ */
+/* ÷˜Ã‚—’…´”… JavaScript ∂ØÃ¨…Ë÷√ */
 
 .no-scrollbar::-webkit-scrollbar {
   display: none;
@@ -64,11 +94,6 @@ body {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
-
-body {
-  -webkit-font-smoothing: antialiased;
-}
-
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom);
 }
@@ -159,5 +184,115 @@ body {
   src: url(./src/assets/fonts/Manrope/Manrope_5.woff2) format('woff2');
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
+
+
+
+/* Motion system */
+@keyframes app-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes app-slide-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, var(--slide-from-y, 12px), 0) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+.animate-in {
+  animation-duration: 220ms;
+  animation-fill-mode: both;
+  animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.fade-in {
+  animation-name: app-fade-in;
+}
+
+.slide-in-from-bottom {
+  --slide-from-y: 16px;
+  animation-name: app-slide-in;
+}
+
+.slide-in-from-bottom-10 {
+  --slide-from-y: 40px;
+  animation-name: app-slide-in;
+}
+
+.slide-in-from-bottom-4 {
+  --slide-from-y: 16px;
+  animation-name: app-slide-in;
+}
+
+.slide-in-from-bottom-2 {
+  --slide-from-y: 8px;
+  animation-name: app-slide-in;
+}
+
+.slide-in-from-top-4 {
+  --slide-from-y: -16px;
+  animation-name: app-slide-in;
+}
+
+.slide-in-from-top-2 {
+  --slide-from-y: -8px;
+  animation-name: app-slide-in;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-in,
+  .fade-in,
+  .slide-in-from-bottom,
+  .slide-in-from-bottom-10,
+  .slide-in-from-bottom-4,
+  .slide-in-from-bottom-2,
+  .slide-in-from-top-4,
+  .slide-in-from-top-2 {
+    animation: none !important;
+  }
+
+  * {
+    transition-duration: 0ms !important;
+    animation-duration: 0ms !important;
+  }
+}
+
+
+.ui-card {
+  background: var(--ui-surface-card-light);
+  border: 1px solid rgba(17, 24, 39, 0.06);
+  border-radius: 18px;
+  box-shadow: var(--shadow-soft);
+}
+
+.dark .ui-card {
+  background: var(--ui-surface-card-dark);
+  border-color: rgba(148, 163, 184, 0.24);
+}
+
+.ui-card-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ui-text-secondary-light);
+}
+
+.dark .ui-card-title {
+  color: var(--ui-text-secondary-dark);
+}
+
+
+
+
 
 

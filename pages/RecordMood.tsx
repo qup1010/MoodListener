@@ -1,13 +1,15 @@
-/**
+﻿/**
  * 记录心情页面
  * 用户选择情绪、添加标签、输入内容、上传图片后保存
  */
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '../components/Icon';
 import { createEntry, fetchTagsByMood, uploadImage, fetchSettings, Tag } from '../services';
 import { MoodType } from '../types';
 import { toLocalDateString } from '../src/utils/date';
+import { ENTRY_PROMPTS } from '../src/constants/copywriting';
+import { confirmAction, promptAction, showToast } from '../src/ui/feedback';
 
 export const RecordMood: React.FC = () => {
   const navigate = useNavigate();
@@ -23,10 +25,33 @@ export const RecordMood: React.FC = () => {
   const [fetchingLocation, setFetchingLocation] = useState(false);
 
   const [showEditModal, setShowEditModal] = useState(false);
+  const [promptIndex, setPromptIndex] = useState(() => Math.floor(Math.random() * ENTRY_PROMPTS.length));
   const [details, setDetails] = useState({
     location: '',
     time: '下午时段'
   });
+  const hasPendingChanges = useMemo(() => {
+    return selectedTags.length > 0 || content.trim().length > 0 || images.length > 0 || details.location.trim().length > 0;
+  }, [selectedTags, content, images, details.location]);
+
+  const handleBack = async () => {
+    if (!hasPendingChanges || saving) {
+      navigate('/home', { replace: true });
+      return;
+    }
+
+    const shouldLeave = await confirmAction({
+      title: '放弃当前记录？',
+      message: '未保存的内容将丢失，是否离开？',
+      confirmText: '离开',
+      cancelText: '继续编辑',
+      danger: true
+    });
+
+    if (shouldLeave) {
+      navigate('/home', { replace: true });
+    }
+  };
 
   // 根据情绪类型加载对应标签
   useEffect(() => {
@@ -67,7 +92,7 @@ export const RecordMood: React.FC = () => {
         setImages(prev => [...prev, result.url]);
       }
     } catch (error: any) {
-      alert(error.message || '图片上传失败');
+      showToast(error.message || '图片上传失败', 'error');
     } finally {
       setUploading(false);
       // 清空 input 以便再次选择同一文件
@@ -103,9 +128,13 @@ export const RecordMood: React.FC = () => {
       // 如果被拒绝，引导用户到设置
       if (permissionStatus.location === 'denied') {
         console.log('[Location] Permission denied');
-        if (confirm('位置权限已被拒绝。\n\n要开启位置获取功能，请前往:\n设置 → 应用 → MoodListener → 权限 → 位置\n\n是否现在前往设置？')) {
-          // 这里可以尝试打开应用设置（需要额外插件）
-          alert('请手动在系统设置中开启位置权限');
+        if (await confirmAction({
+          title: '位置权限已被拒绝',
+          message: '要开启位置获取功能，请前往：设置 → 应用 → MoodListener → 权限 → 位置。是否现在去设置？',
+          confirmText: '去设置',
+          cancelText: '稍后'
+        })) {
+          showToast('请手动在系统设置中开启位置权限', 'info', 3000);
         }
         setFetchingLocation(false);
         return;
@@ -118,7 +147,7 @@ export const RecordMood: React.FC = () => {
         console.log('[Location] Permission request result:', requestResult.location);
 
         if (requestResult.location !== 'granted') {
-          alert('位置权限被拒绝，无法获取位置');
+          showToast('位置权限被拒绝，无法获取位置', 'error');
           setFetchingLocation(false);
           return;
         }
@@ -192,8 +221,19 @@ export const RecordMood: React.FC = () => {
 
         // 提供手动输入选项
         const isTimeout = geoError.name === 'AbortError' || geoError.message?.includes('timeout');
-        if (confirm(`已获取GPS坐标:\n${coords}\n\n地址解析${isTimeout ? '超时' : '失败'}，是否手动输入位置？`)) {
-          const customLocation = prompt('请输入位置名称:', '');
+        if (await confirmAction({
+          title: '地址解析失败',
+          message: `已获取GPS坐标：${coords}。地址解析${isTimeout ? '超时' : '失败'}，是否手动输入位置？`,
+          confirmText: '手动输入',
+          cancelText: '取消'
+        })) {
+          const customLocation = await promptAction({
+            title: '手动输入位置',
+            message: '请输入位置名称',
+            placeholder: '例如：浦东新区 世纪大道',
+            confirmText: '保存',
+            cancelText: '取消'
+          });
           if (customLocation && customLocation.trim()) {
             setDetails(prev => ({ ...prev, location: customLocation.trim() }));
             // alert('✅ 位置已设置'); // Removed annoying alert
@@ -216,8 +256,19 @@ export const RecordMood: React.FC = () => {
       }
 
       // 即使GPS失败，也提供手动输入选项
-      if (confirm(`${errorMessage}\n\n是否手动输入位置？`)) {
-        const customLocation = prompt('请输入位置名称:', '');
+      if (await confirmAction({
+        title: '获取位置失败',
+        message: `${errorMessage}。是否手动输入位置？`,
+        confirmText: '手动输入',
+        cancelText: '取消'
+      })) {
+        const customLocation = await promptAction({
+          title: '手动输入位置',
+          message: '请输入位置名称',
+          placeholder: '例如：浦东新区 世纪大道',
+          confirmText: '保存',
+          cancelText: '取消'
+        });
         if (customLocation && customLocation.trim()) {
           setDetails(prev => ({ ...prev, location: customLocation.trim() }));
           // alert('✅ 位置已设置'); // Removed annoying alert
@@ -261,7 +312,7 @@ export const RecordMood: React.FC = () => {
       navigate('/history');
     } catch (error) {
       console.error('保存失败:', error);
-      alert('保存失败，请重试');
+      showToast('保存失败，请重试', 'error');
     } finally {
       setSaving(false);
     }
@@ -279,16 +330,22 @@ export const RecordMood: React.FC = () => {
   };
 
   return (
-    <div className="relative flex h-auto min-h-screen w-full flex-col overflow-x-hidden pb-24 bg-background-light dark:bg-background-dark font-display text-[#121617] dark:text-gray-100 antialiased selection:bg-primary/10">
+    <div className="relative flex h-auto min-h-screen w-full flex-col overflow-x-hidden pb-8 bg-background-light dark:bg-background-dark font-display text-[#121617] dark:text-gray-100 antialiased selection:bg-primary/10">
       <header className="flex items-center justify-between p-4 sticky top-0 z-50 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md transition-colors duration-300">
         <button
-          onClick={() => navigate(-1)}
+          onClick={() => void handleBack()}
           className="flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors group"
         >
           <Icon name="arrow_back_ios_new" size={24} className="text-[#121617] dark:text-white group-hover:-translate-x-0.5 transition-transform" />
         </button>
         <h2 className="text-[#121617] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">记录心情</h2>
-        <div className="size-10 shrink-0"></div>
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="h-9 px-3 shrink-0 rounded-lg bg-primary text-white text-sm font-bold disabled:opacity-50"
+        >
+          {saving ? '保存中' : '保存'}
+        </button>
       </header>
 
       <main className="px-4 pt-2 flex flex-col gap-8">
@@ -301,11 +358,11 @@ export const RecordMood: React.FC = () => {
               onClick={() => setSelectedMood('positive')}
             >
               <input checked={selectedMood === 'positive'} className="peer sr-only" id="cat_positive" name="mood_category" type="radio" readOnly />
-              <label className={`flex flex-col items-center gap-3 p-4 rounded-2xl border-2 border-transparent shadow-sm hover:shadow-md transition-all duration-300 h-32 justify-center ${selectedMood === 'positive' ? 'bg-mood-positive shadow-lg shadow-mood-positive/30' : 'bg-white dark:bg-gray-800/50'}`} htmlFor="cat_positive">
-                <div className={`size-10 rounded-full flex items-center justify-center transition-colors ${selectedMood === 'positive' ? 'bg-white/30 text-white' : 'bg-mood-positive/10 dark:bg-mood-positive/20 text-[#166534] dark:text-mood-positive'}`}>
+              <label className={`flex flex-col items-center gap-3 p-4 rounded-2xl border-2 border-transparent shadow-sm hover:shadow-md transition-all duration-300 h-32 justify-center ${selectedMood === 'positive' ? 'bg-mood-positive/10 border-mood-positive/40' : 'bg-white dark:bg-gray-800/50 border-gray-200 dark:border-gray-700'}`} htmlFor="cat_positive">
+                <div className={`size-10 rounded-full flex items-center justify-center transition-colors ${selectedMood === 'positive' ? 'bg-mood-positive/20 text-[#166534] dark:text-mood-positive' : 'bg-mood-positive/10 dark:bg-mood-positive/20 text-[#166534] dark:text-mood-positive'}`}>
                   <Icon name="sentiment_satisfied" className="text-3xl" fill />
                 </div>
-                <span className={`text-sm font-bold ${selectedMood === 'positive' ? 'text-white' : 'text-gray-600 dark:text-gray-400'}`}>积极</span>
+                <span className={`text-sm font-bold ${selectedMood === 'positive' ? 'text-[#166534] dark:text-mood-positive' : 'text-gray-600 dark:text-gray-400'}`}>积极</span>
               </label>
             </div>
             <div
@@ -313,11 +370,11 @@ export const RecordMood: React.FC = () => {
               onClick={() => setSelectedMood('neutral')}
             >
               <input checked={selectedMood === 'neutral'} className="peer sr-only" id="cat_neutral" name="mood_category" type="radio" readOnly />
-              <label className={`flex flex-col items-center gap-3 p-4 rounded-2xl border-2 border-transparent shadow-sm hover:shadow-md transition-all duration-300 h-32 justify-center ${selectedMood === 'neutral' ? 'bg-mood-neutral shadow-lg shadow-mood-neutral/30 opacity-100' : 'bg-white dark:bg-gray-800/50 opacity-70 hover:opacity-100'}`} htmlFor="cat_neutral">
-                <div className={`size-10 rounded-full flex items-center justify-center transition-colors ${selectedMood === 'neutral' ? 'bg-white/30 text-[#422006]' : 'bg-mood-neutral/10 dark:bg-mood-neutral/20 text-[#854d0e] dark:text-mood-neutral'}`}>
+              <label className={`flex flex-col items-center gap-3 p-4 rounded-2xl border-2 border-transparent shadow-sm hover:shadow-md transition-all duration-300 h-32 justify-center ${selectedMood === 'neutral' ? 'bg-mood-neutral/15 border-mood-neutral/45' : 'bg-white dark:bg-gray-800/50 border-gray-200 dark:border-gray-700'}`} htmlFor="cat_neutral">
+                <div className={`size-10 rounded-full flex items-center justify-center transition-colors ${selectedMood === 'neutral' ? 'bg-mood-neutral/25 text-[#422006]' : 'bg-mood-neutral/10 dark:bg-mood-neutral/20 text-[#854d0e] dark:text-mood-neutral'}`}>
                   <Icon name="sentiment_neutral" className="text-3xl" fill />
                 </div>
-                <span className={`text-sm font-bold ${selectedMood === 'neutral' ? 'text-[#422006]' : 'text-gray-600 dark:text-gray-400'}`}>中性</span>
+                <span className={`text-sm font-bold ${selectedMood === 'neutral' ? 'text-[#422006] dark:text-mood-neutral' : 'text-gray-600 dark:text-gray-400'}`}>中性</span>
               </label>
             </div>
             <div
@@ -325,11 +382,11 @@ export const RecordMood: React.FC = () => {
               onClick={() => setSelectedMood('negative')}
             >
               <input checked={selectedMood === 'negative'} className="peer sr-only" id="cat_negative" name="mood_category" type="radio" readOnly />
-              <label className={`flex flex-col items-center gap-3 p-4 rounded-2xl border-2 border-transparent shadow-sm hover:shadow-md transition-all duration-300 h-32 justify-center ${selectedMood === 'negative' ? 'bg-mood-negative shadow-lg shadow-mood-negative/30 opacity-100' : 'bg-white dark:bg-gray-800/50 opacity-70 hover:opacity-100'}`} htmlFor="cat_negative">
-                <div className={`size-10 rounded-full flex items-center justify-center transition-colors ${selectedMood === 'negative' ? 'bg-white/30 text-white' : 'bg-mood-negative/10 dark:bg-mood-negative/20 text-[#991b1b] dark:text-mood-negative'}`}>
+              <label className={`flex flex-col items-center gap-3 p-4 rounded-2xl border-2 border-transparent shadow-sm hover:shadow-md transition-all duration-300 h-32 justify-center ${selectedMood === 'negative' ? 'bg-mood-negative/12 border-mood-negative/45' : 'bg-white dark:bg-gray-800/50 border-gray-200 dark:border-gray-700'}`} htmlFor="cat_negative">
+                <div className={`size-10 rounded-full flex items-center justify-center transition-colors ${selectedMood === 'negative' ? 'bg-mood-negative/20 text-[#991b1b] dark:text-mood-negative' : 'bg-mood-negative/10 dark:bg-mood-negative/20 text-[#991b1b] dark:text-mood-negative'}`}>
                   <Icon name="sentiment_dissatisfied" className="text-3xl" fill />
                 </div>
-                <span className={`text-sm font-bold ${selectedMood === 'negative' ? 'text-white' : 'text-gray-600 dark:text-gray-400'}`}>消极</span>
+                <span className={`text-sm font-bold ${selectedMood === 'negative' ? 'text-[#991b1b] dark:text-mood-negative' : 'text-gray-600 dark:text-gray-400'}`}>消极</span>
               </label>
             </div>
           </div>
@@ -341,9 +398,9 @@ export const RecordMood: React.FC = () => {
             <h3 className="text-[#121617] dark:text-white text-lg font-bold leading-tight">选择情绪标签</h3>
             <button
               onClick={() => navigate('/settings/tags')}
-              className="text-sm font-medium text-primary dark:text-mood-neutral hover:opacity-80 active:scale-95 transition-transform"
+              className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold border border-primary/30 text-primary bg-primary/5 hover:bg-primary/10 transition-colors"
             >
-              管理
+              管理标签
             </button>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -372,12 +429,22 @@ export const RecordMood: React.FC = () => {
 
         {/* 内容输入 */}
         <section>
-          <h3 className="text-[#121617] dark:text-white text-lg font-bold leading-tight mb-4">此刻的想法...</h3>
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h3 className="text-[#121617] dark:text-white text-lg font-bold leading-tight">此刻的想法...</h3>
+            <button
+              type="button"
+              onClick={() => setPromptIndex((prev) => (prev + 1) % ENTRY_PROMPTS.length)}
+              className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold bg-primary/10 text-primary hover:bg-primary/15 transition-colors"
+            >
+              <Icon name="tips_and_updates" size={14} />
+              换个提示
+            </button>
+          </div>
           <div className="relative rounded-2xl bg-white dark:bg-gray-800/50 p-1 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
             <div className="relative rounded-xl border-2 border-transparent focus-within:border-primary/20 dark:focus-within:border-white/20 transition-colors">
               <textarea
                 className="w-full bg-transparent border-0 rounded-xl p-4 text-base text-[#121617] dark:text-gray-100 placeholder:text-gray-400 focus:ring-0 min-h-[140px] resize-none leading-relaxed outline-none"
-                placeholder="写下你现在的思绪..."
+                placeholder={ENTRY_PROMPTS[promptIndex]}
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
               ></textarea>
@@ -462,20 +529,6 @@ export const RecordMood: React.FC = () => {
         </section>
       </main>
 
-      {/* 保存按钮 */}
-      <div className="fixed bottom-0 left-0 w-full p-5 bg-gradient-to-t from-background-light via-background-light/95 to-transparent dark:from-background-dark dark:via-background-dark/95 z-40 pb-8">
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="w-full flex items-center justify-center gap-2 h-14 bg-primary dark:bg-gray-100 dark:text-primary text-white rounded-xl shadow-lg shadow-primary/25 dark:shadow-black/40 hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] transition-all duration-200 group disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <span className="font-bold text-lg tracking-wide">
-            {saving ? '保存中...' : '保存记录'}
-          </span>
-          {!saving && <Icon name="send" className="group-hover:translate-x-1 transition-transform" />}
-        </button>
-      </div>
-
       {/* 编辑详情弹窗 */}
       {showEditModal && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
@@ -534,4 +587,19 @@ export const RecordMood: React.FC = () => {
     </div>
   );
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

@@ -1,11 +1,12 @@
-/**
+﻿/**
  * 用户资料设置页面
  * 修改用户名和头像
  */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '../components/Icon';
-import { fetchProfile, updateProfile, UserProfile } from '../services';
+import { fetchProfile, updateProfile } from '../services';
+import { showToast } from '../src/ui/feedback';
 
 const buildAvatarDataUrl = (label: string, background: string) => {
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
@@ -15,7 +16,6 @@ const buildAvatarDataUrl = (label: string, background: string) => {
     return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 };
 
-// 本地内置头像（data URL），避免默认向第三方发起请求
 const AVATAR_OPTIONS = [
     buildAvatarDataUrl('A', '#ef4444'),
     buildAvatarDataUrl('S', '#f97316'),
@@ -27,8 +27,20 @@ const AVATAR_OPTIONS = [
     buildAvatarDataUrl('Q', '#ec4899'),
 ];
 
+const isMediaPermissionGranted = (state?: string) => state === 'granted' || state === 'limited';
+
+const blobToDataUrl = (blob: Blob): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = () => reject(new Error('图片读取失败'));
+        reader.readAsDataURL(blob);
+    });
+};
+
 export const ProfileSettings: React.FC = () => {
     const navigate = useNavigate();
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [username, setUsername] = useState('');
@@ -36,14 +48,18 @@ export const ProfileSettings: React.FC = () => {
     const [showAvatarPicker, setShowAvatarPicker] = useState(false);
 
     useEffect(() => {
-        loadProfile();
+        void loadProfile();
     }, []);
+
+    const applyAvatar = (url: string) => {
+        setAvatarUrl(url);
+        setShowAvatarPicker(false);
+    };
 
     const loadProfile = async () => {
         try {
             const profile = await fetchProfile();
             setUsername(profile.username || '朋友');
-            // 确保头像 URL 有效，否则使用默认头像
             const savedAvatar = profile.avatar_url;
             if (savedAvatar && (savedAvatar.startsWith('http') || savedAvatar.startsWith('data:'))) {
                 setAvatarUrl(savedAvatar);
@@ -60,7 +76,7 @@ export const ProfileSettings: React.FC = () => {
 
     const handleSave = async () => {
         if (!username.trim()) {
-            alert('请输入用户名');
+            showToast('请输入用户名', 'error');
             return;
         }
 
@@ -70,76 +86,89 @@ export const ProfileSettings: React.FC = () => {
                 username: username.trim(),
                 avatar_url: avatarUrl
             });
-            navigate(-1);
+            navigate('/settings', { replace: true });
         } catch (error) {
             console.error('保存失败:', error);
-            alert('保存失败，请重试');
+            showToast('保存失败，请重试', 'error');
         } finally {
             setSaving(false);
         }
     };
 
-    const handlePickFromGallery = async () => {
-        console.log('[Avatar] Starting image picker...');
-        setShowAvatarPicker(false); // 先关闭选择器
+    const handleWebFilePicker = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleFileInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        e.target.value = '';
+        if (!file) return;
+
+        try {
+            const dataUrl = await blobToDataUrl(file);
+            applyAvatar(dataUrl);
+        } catch (error) {
+            console.error('[Avatar] Web file pick failed:', error);
+            showToast('头像读取失败，请重试', 'error');
+        }
+    };
+
+    const pickAvatar = async (sourceType: 'photos' | 'camera') => {
+        setShowAvatarPicker(false);
 
         try {
             const { Camera, CameraResultType, CameraSource } = await import('@capacitor/camera');
 
-            // 检查 permission
-            const permissions = await Camera.checkPermissions();
-            if (permissions.photos === 'denied' || permissions.camera === 'denied') {
-                // 尝试请求权限
-                const request = await Camera.requestPermissions();
-                if (request.photos !== 'granted' && request.camera !== 'granted') {
-                    alert('需要相册或相机权限才能更改头像');
+            const current = await Camera.checkPermissions();
+            const needPhotos = sourceType === 'photos' && !isMediaPermissionGranted(current.photos);
+            const needCamera = sourceType === 'camera' && !isMediaPermissionGranted(current.camera);
+
+            if (needPhotos || needCamera) {
+                const request = await Camera.requestPermissions({
+                    permissions: sourceType === 'camera' ? ['camera', 'photos'] : ['photos']
+                });
+
+                if (sourceType === 'photos' && !isMediaPermissionGranted(request.photos)) {
+                    showToast('需要相册权限才能更改头像', 'error');
+                    return;
+                }
+
+                if (sourceType === 'camera' && !isMediaPermissionGranted(request.camera)) {
+                    showToast('需要相机权限才能拍照设置头像', 'error');
                     return;
                 }
             }
 
-            console.log('[Avatar] Opening photo picker...');
             const image = await Camera.getPhoto({
-                quality: 80, // 直接使用 Capacitor 的压缩
-                allowEditing: true, // 允许原生裁剪
+                quality: 85,
+                allowEditing: true,
                 resultType: CameraResultType.DataUrl,
-                source: CameraSource.Prompt, // 让用户选择 拍照 或 相册
-                width: 400, // 限制宽度
-                height: 400, // 限制高度
-                promptLabelHeader: '更改头像',
-                promptLabelPhoto: '从相册选择',
-                promptLabelPicture: '拍照'
+                source: sourceType === 'camera' ? CameraSource.Camera : CameraSource.Photos,
+                width: 512,
+                height: 512,
+                webUseInput: true
             });
 
             if (image.dataUrl) {
-                console.log('[Avatar] Image selected, size:', image.dataUrl.length);
-                setAvatarUrl(image.dataUrl);
+                applyAvatar(image.dataUrl);
+                return;
             }
+
+            if (image.webPath) {
+                const response = await fetch(image.webPath);
+                const blob = await response.blob();
+                const dataUrl = await blobToDataUrl(blob);
+                applyAvatar(dataUrl);
+                return;
+            }
+
+            showToast('未获取到头像，请重试', 'error');
         } catch (error: any) {
             console.error('[Avatar] Error:', error);
-            if (error.message?.includes('User cancelled')) return;
-
-            // Web fallback
+            if (error?.message?.toLowerCase().includes('cancel')) return;
+            // 机型兼容兜底：使用文件选择器
             handleWebFilePicker();
         }
-    };
-
-    const handleWebFilePicker = () => {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = 'image/*';
-        input.onchange = async (e: any) => {
-            const file = e.target.files?.[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                const dataUrl = event.target?.result as string;
-                setAvatarUrl(dataUrl);
-                setShowAvatarPicker(false);
-            };
-            reader.readAsDataURL(file);
-        };
-        input.click();
     };
 
     if (loading) {
@@ -154,7 +183,7 @@ export const ProfileSettings: React.FC = () => {
         <div className="relative flex min-h-screen w-full flex-col bg-background-light dark:bg-background-dark font-display antialiased">
             <header className="flex items-center justify-between p-4 sticky top-0 z-50 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-800/50">
                 <button
-                    onClick={() => navigate(-1)}
+                    onClick={() => navigate('/settings', { replace: true })}
                     className="flex size-10 items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
                 >
                     <Icon name="arrow_back_ios_new" className="text-gray-900 dark:text-white" />
@@ -164,7 +193,14 @@ export const ProfileSettings: React.FC = () => {
             </header>
 
             <main className="flex-1 px-6 py-8">
-                {/* 头像选择 */}
+                <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleFileInputChange}
+                />
+
                 <div className="flex flex-col items-center mb-8">
                     <div
                         className="relative cursor-pointer group"
@@ -180,19 +216,33 @@ export const ProfileSettings: React.FC = () => {
                     <p className="text-sm text-gray-500 mt-3">点击更换头像</p>
                 </div>
 
-                {/* 头像选择器 */}
                 {showAvatarPicker && (
                     <div className="mb-8 p-4 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 animate-in fade-in slide-in-from-top-2">
                         <p className="text-sm font-medium text-gray-500 mb-4 text-center">选择头像</p>
 
-                        {/* 从相册选择 */}
-                        <button
-                            onClick={handlePickFromGallery}
-                            className="w-full mb-4 flex items-center justify-center gap-2 p-3 rounded-xl bg-primary/10 text-primary font-medium hover:bg-primary/20 transition-colors"
-                        >
-                            <Icon name="photo_library" size={20} />
-                            <span>从相册选择</span>
-                        </button>
+                        <div className="grid grid-cols-1 gap-2 mb-4">
+                            <button
+                                onClick={() => void pickAvatar('photos')}
+                                className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-primary/10 text-primary font-medium hover:bg-primary/20 transition-colors"
+                            >
+                                <Icon name="photo_library" size={20} />
+                                <span>从相册选择</span>
+                            </button>
+                            <button
+                                onClick={() => void pickAvatar('camera')}
+                                className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                            >
+                                <Icon name="photo_camera" size={20} />
+                                <span>拍照设置头像</span>
+                            </button>
+                            <button
+                                onClick={handleWebFilePicker}
+                                className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-gray-50 dark:bg-gray-700/50 text-gray-500 dark:text-gray-300 font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                            >
+                                <Icon name="folder_open" size={20} />
+                                <span>兼容模式（文件）</span>
+                            </button>
+                        </div>
 
                         <p className="text-xs text-gray-400 text-center mb-3">或选择预设头像</p>
 
@@ -200,10 +250,7 @@ export const ProfileSettings: React.FC = () => {
                             {AVATAR_OPTIONS.map((url, index) => (
                                 <button
                                     key={index}
-                                    onClick={() => {
-                                        setAvatarUrl(url);
-                                        setShowAvatarPicker(false);
-                                    }}
+                                    onClick={() => applyAvatar(url)}
                                     className={`size-16 rounded-full overflow-hidden border-2 transition-all hover:scale-110 ${avatarUrl === url
                                         ? 'border-primary ring-2 ring-primary/30'
                                         : 'border-transparent'
@@ -216,7 +263,6 @@ export const ProfileSettings: React.FC = () => {
                     </div>
                 )}
 
-                {/* 用户名输入 */}
                 <div className="mb-8">
                     <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
                         用户名
@@ -236,7 +282,6 @@ export const ProfileSettings: React.FC = () => {
                     </div>
                 </div>
 
-                {/* 预览 */}
                 <div className="p-4 bg-primary/5 dark:bg-white/5 rounded-xl border border-primary/10 dark:border-white/10">
                     <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">预览效果</p>
                     <p className="text-xl font-bold text-primary dark:text-primary">
@@ -245,7 +290,6 @@ export const ProfileSettings: React.FC = () => {
                 </div>
             </main>
 
-            {/* 保存按钮 */}
             <div className="p-6 bg-gradient-to-t from-background-light via-background-light/95 to-transparent dark:from-background-dark dark:via-background-dark/95">
                 <button
                     onClick={handleSave}

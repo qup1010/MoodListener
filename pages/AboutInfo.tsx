@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 软件信息页面
  * 展示应用版本、开发者信息等
  */
@@ -16,7 +16,7 @@ export const AboutInfo: React.FC = () => {
         <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-background-light dark:bg-background-dark font-display text-[#121617] dark:text-gray-100 antialiased">
             <header className="flex items-center justify-between p-4 sticky top-0 z-50 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-800/50 transition-colors duration-300">
                 <button
-                    onClick={() => navigate(-1)}
+                    onClick={() => navigate('/settings', { replace: true })}
                     className="flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
                 >
                     <Icon name="arrow_back_ios_new" className="text-[#121617] dark:text-white" />
@@ -180,3 +180,4 @@ export const AboutInfo: React.FC = () => {
         </div>
     );
 };
+

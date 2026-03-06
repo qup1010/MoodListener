@@ -5,7 +5,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { AreaChart, Area, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Icon } from '../components/Icon';
-import { fetchStats, StatsData, fetchEntries } from '../services';
+import { fetchStats, StatsData, fetchEntries, StatsDisplayState } from '../services';
 import { Entry } from '../types';
 import { toLocalDateString } from '../src/utils/date';
 
@@ -58,15 +58,26 @@ export const Stats: React.FC = () => {
 
   const pieData = stats
     ? [
-        { name: '积极', value: stats.mood_distribution.positive_percent, color: '#F5928C' },
-        { name: '中性', value: stats.mood_distribution.neutral_percent, color: '#A2D9CE' },
-        { name: '消极', value: stats.mood_distribution.negative_percent, color: '#6B4F5E' }
+        { name: '积极', value: stats.mood_distribution.positive_percent, color: '#4ade80' },
+        { name: '中性', value: stats.mood_distribution.neutral_percent, color: '#facc15' },
+        { name: '消极', value: stats.mood_distribution.negative_percent, color: '#f87171' }
       ]
     : [];
 
   const healthScore = stats
     ? Math.round(stats.mood_distribution.positive_percent + stats.mood_distribution.neutral_percent * 0.5)
     : 0;
+
+  const statsDisplay: StatsDisplayState = useMemo(() => {
+    const totalEntries = stats?.total_entries || 0;
+    const hasEnoughData = totalEntries >= 3;
+    return {
+      hasEnoughData,
+      unlockHint: hasEnoughData ? '' : `再记录 ${3 - totalEntries} 次可解锁健康度`,
+      showHealthScore: hasEnoughData,
+      healthExplanation: '健康度 = 积极占比 + 0.5 × 中性占比，仅用于观察近期状态趋势。'
+    };
+  }, [stats]);
 
   const trendPeak = useMemo(() => {
     if (!trendData.length) return 0;
@@ -95,23 +106,33 @@ export const Stats: React.FC = () => {
         </button>
       </header>
 
-      <main className="px-4 pt-4 flex flex-col gap-6 pb-28">
+      <main className="px-4 pt-4 flex flex-col gap-4 pb-28">
         <section className="grid grid-cols-3 gap-3">
-          <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
-            <div className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">连续</div>
+          <div className="ui-card p-4">
+            <div className="ui-card-title mb-2">连续</div>
             <div className="text-2xl font-extrabold text-[#121617] dark:text-white">{stats?.streak_days || 0}<span className="text-sm font-medium text-gray-500 ml-1">天</span></div>
           </div>
-          <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
-            <div className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">总记录</div>
-            <div className="text-2xl font-extrabold text-[#121617] dark:text-white">{stats?.total_entries || 0}<span className="text-sm font-medium text-gray-500 ml-1">篇</span></div>
+          <div className="ui-card p-4">
+            <div className="ui-card-title mb-2">总记录</div>
+            <div className="text-2xl font-extrabold text-[#121617] dark:text-white">{stats?.total_entries || 0}<span className="text-sm font-medium text-gray-500 ml-1">条</span></div>
           </div>
-          <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
-            <div className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">健康度</div>
-            <div className="text-2xl font-extrabold text-primary">{healthScore}<span className="text-sm font-medium text-gray-500 ml-1">%</span></div>
+          <div className="ui-card p-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="ui-card-title">健康度</div>
+              <button className="size-5 rounded-full border border-gray-300 dark:border-gray-600 text-[10px] text-gray-500">?</button>
+            </div>
+            {statsDisplay.showHealthScore ? (
+              <div className="text-2xl font-extrabold text-primary">{healthScore}<span className="text-sm font-medium text-gray-500 ml-1">%</span></div>
+            ) : (
+              <div>
+                <div className="text-lg font-bold text-gray-500">待解锁</div>
+                <p className="text-[11px] text-gray-400 mt-1">{statsDisplay.unlockHint}</p>
+              </div>
+            )}
           </div>
         </section>
 
-        <section className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700">
+        <section className="ui-card p-5">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-lg font-bold text-[#121617] dark:text-white">情绪趋势</h3>
             <div className="flex gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
@@ -131,50 +152,63 @@ export const Stats: React.FC = () => {
             </div>
           </div>
           <p className="text-xs text-gray-500 mb-4">当前周期单日峰值 {trendPeak} 条</p>
-          <div className="relative h-48 w-full">
-            {trendData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={trendData}>
-                  <defs>
-                    <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#355c5f" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#355c5f" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <Area
-                    type="monotone"
-                    dataKey="value"
-                    stroke="#355c5f"
-                    strokeWidth={3}
-                    fillOpacity={1}
-                    fill="url(#colorValue)"
-                    dot={trendData.length <= 15 ? { fill: '#355c5f', r: 4, strokeWidth: 0 } : false}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex items-center justify-center h-full text-gray-400">暂无数据</div>
-            )}
-          </div>
-          <div className="flex justify-between mt-4 text-[8px] font-bold text-gray-400 uppercase tracking-tighter px-2 overflow-hidden">
-            {trendData.length <= 15 ? (
-              trendData.map((item) => <span key={item.name}>{item.name}</span>)
-            ) : (
-              <>
-                <span>{trendData[0]?.name}</span>
-                <span>{trendData[Math.floor(trendData.length / 2)]?.name}</span>
-                <span>{trendData[trendData.length - 1]?.name}</span>
-              </>
-            )}
-          </div>
+
+          {entries.length === 0 ? (
+            <div className="h-44 rounded-xl border border-dashed border-gray-300 dark:border-gray-700 bg-gray-50/70 dark:bg-gray-800/40 flex flex-col items-center justify-center text-center px-4">
+              <Icon name="insights" className="text-gray-400 text-2xl mb-2" />
+              <p className="text-sm font-semibold text-gray-600 dark:text-gray-300">记录 3 次后解锁趋势</p>
+              <p className="text-xs text-gray-400 mt-1">趋势图会展示你在不同时间段的记录节奏。</p>
+            </div>
+          ) : (
+            <>
+              <div className="relative h-48 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={trendData}>
+                    <defs>
+                      <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#c2943e" stopOpacity={0.28} />
+                        <stop offset="95%" stopColor="#c2943e" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <Area
+                      type="monotone"
+                      dataKey="value"
+                      stroke="#c2943e"
+                      strokeWidth={2.5}
+                      fillOpacity={1}
+                      fill="url(#colorValue)"
+                      dot={trendData.length <= 15 ? { fill: '#c2943e', r: 3, strokeWidth: 0 } : false}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="flex justify-between mt-4 text-[8px] font-bold text-gray-400 uppercase tracking-tighter px-2 overflow-hidden">
+                {trendData.length <= 15 ? (
+                  trendData.map((item) => <span key={item.name}>{item.name}</span>)
+                ) : (
+                  <>
+                    <span>{trendData[0]?.name}</span>
+                    <span>{trendData[Math.floor(trendData.length / 2)]?.name}</span>
+                    <span>{trendData[trendData.length - 1]?.name}</span>
+                  </>
+                )}
+              </div>
+            </>
+          )}
         </section>
 
-        <section className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700">
-          <h3 className="text-lg font-bold text-[#121617] dark:text-white mb-6">情绪占比分析</h3>
-          <div className="flex items-center gap-8">
-            <div className="relative size-32 shrink-0">
-              <div className="w-full h-full transform -rotate-90">
-                {pieData.length > 0 && pieData.some((item) => item.value > 0) ? (
+        <section className="ui-card p-5">
+          <h3 className="text-lg font-bold text-[#121617] dark:text-white mb-4">情绪占比</h3>
+
+          {entries.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-700 bg-gray-50/70 dark:bg-gray-800/40 px-4 py-6 text-center">
+              <p className="text-sm font-semibold text-gray-600 dark:text-gray-300">还没有可分析的数据</p>
+              <p className="text-xs text-gray-400 mt-1">完成记录后，这里会显示积极/中性/消极占比。</p>
+            </div>
+          ) : (
+            <div className="flex items-center gap-8">
+              <div className="relative size-32 shrink-0">
+                <div className="w-full h-full transform -rotate-90">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie data={pieData} innerRadius={50} outerRadius={64} paddingAngle={5} dataKey="value" stroke="none">
@@ -184,41 +218,45 @@ export const Stats: React.FC = () => {
                       </Pie>
                     </PieChart>
                   </ResponsiveContainer>
-                ) : (
-                  <div className="flex items-center justify-center w-full h-full">
-                    <div className="size-28 rounded-full border-8 border-gray-200 dark:border-gray-700"></div>
-                  </div>
-                )}
-              </div>
-              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <span className="text-xl font-extrabold text-primary dark:text-mood-neutral">{healthScore}%</span>
-                <span className="text-[8px] font-bold text-gray-400 uppercase">健康度</span>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-3 flex-1">
-              {pieData.map((item) => (
-                <div key={item.name} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="size-3 rounded-full" style={{ backgroundColor: item.color }}></div>
-                    <span className="text-sm font-semibold text-gray-600 dark:text-gray-300">{item.name}</span>
-                  </div>
-                  <span className="text-sm font-bold text-[#121617] dark:text-white">{item.value}%</span>
                 </div>
-              ))}
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                  {statsDisplay.showHealthScore ? (
+                    <>
+                      <span className="text-xl font-extrabold text-primary">{healthScore}%</span>
+                      <span className="text-[9px] font-bold text-gray-400 uppercase">健康度</span>
+                    </>
+                  ) : (
+                    <span className="text-xs font-semibold text-gray-400">待解锁</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-3 flex-1">
+                {pieData.map((item) => (
+                  <div key={item.name} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="size-3 rounded-full" style={{ backgroundColor: item.color }}></div>
+                      <span className="text-sm font-semibold text-gray-600 dark:text-gray-300">{item.name}</span>
+                    </div>
+                    <span className="text-sm font-bold text-[#121617] dark:text-white">{item.value}%</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
+
+          <p className="text-xs text-gray-500 mt-4">{statsDisplay.healthExplanation}</p>
         </section>
 
-        <section className="bg-primary/5 dark:bg-white/5 border border-primary/10 dark:border-white/10 p-5 rounded-2xl mb-8">
+        <section className="ui-card p-4 mb-8 bg-primary/5 border-primary/10">
           <div className="flex items-start gap-3">
-            <Icon name="auto_awesome" className="text-primary dark:text-mood-neutral" />
+            <Icon name="auto_awesome" className="text-primary" />
             <div>
-              <h4 className="text-sm font-bold text-primary dark:text-mood-neutral mb-1">本期洞察</h4>
+              <h4 className="text-sm font-bold text-primary mb-1">本期洞察</h4>
               <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
                 {stats && stats.total_entries > 0
-                  ? <>你已经记录了 <span className="font-bold text-gray-900 dark:text-white">{stats.total_entries}</span> 条心情日记，其中积极情绪占 <span className="font-bold text-gray-900 dark:text-white">{stats.mood_distribution.positive_percent}%</span>。继续保持记录习惯吧。</>
-                  : <>开始记录你的心情，获取个性化的情绪洞察。</>}
+                  ? <>你已经记录了 <span className="font-bold text-gray-900 dark:text-white">{stats.total_entries}</span> 条，其中积极情绪占 <span className="font-bold text-gray-900 dark:text-white">{stats.mood_distribution.positive_percent}%</span>。继续保持记录节奏。</>
+                  : <>先完成 1 条记录，系统会逐步生成你的趋势和洞察。</>}
               </p>
             </div>
           </div>

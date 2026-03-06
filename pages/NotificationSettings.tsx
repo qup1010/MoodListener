@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 通知设置页面
  * 配置每日提醒时间（支持多时段、多周期、智能文案）
  */
@@ -8,6 +8,7 @@ import { Icon } from '../components/Icon';
 import { fetchSettings, updateSettings, Reminder } from '../services';
 import { getRandomMessage } from '../src/constants/notificationMessages';
 import { PermissionState } from '@capacitor/core';
+import { confirmAction, showToast } from '../src/ui/feedback';
 
 export const NotificationSettings: React.FC = () => {
     const navigate = useNavigate();
@@ -87,10 +88,10 @@ export const NotificationSettings: React.FC = () => {
             });
 
             await scheduleNotifications(enabled, reminders);
-            navigate(-1);
+            navigate('/settings', { replace: true });
         } catch (error) {
             console.error('保存失败:', error);
-            alert('保存失败，请重试');
+            showToast('保存失败，请重试', 'error');
         } finally {
             setSaving(false);
         }
@@ -106,7 +107,7 @@ export const NotificationSettings: React.FC = () => {
             // 检查权限
             const permission = await LocalNotifications.checkPermissions();
             if (permission.display !== 'granted') {
-                alert('请先开启通知权限');
+                showToast('请先开启通知权限', 'error');
                 return;
             }
 
@@ -141,10 +142,10 @@ export const NotificationSettings: React.FC = () => {
             });
 
             console.log('[Test] Test notification scheduled for:', testTime);
-            alert(`✅ 测试通知已设置\n\n将在2秒后触发\n请注意查看通知栏`);
+            showToast('测试通知已设置，将在2秒后触发', 'success', 2600);
         } catch (error) {
             console.error('[Test] Failed:', error);
-            alert(`测试失败: ${error}`);
+            showToast(`测试失败: ${error}`, 'error', 2800);
         }
     };
 
@@ -248,15 +249,15 @@ export const NotificationSettings: React.FC = () => {
                 // 验证调度
                 const newPending = await LocalNotifications.getPending();
                 console.log(`[Notification] Verified: ${newPending.notifications.length} notifications scheduled`);
-                alert(`✅ 已成功设置 ${newPending.notifications.length} 个提醒`);
+                showToast(`已成功设置 ${newPending.notifications.length} 个提醒`, 'success', 2600);
             } else {
                 console.log('[Notification] No notifications to schedule');
-                alert('⚠️ 没有启用的提醒');
+                showToast('没有启用的提醒', 'info');
             }
 
         } catch (error) {
             console.error('[Notification] Schedule failed:', error);
-            alert(`设置通知失败: ${error}`);
+            showToast(`设置通知失败: ${error}`, 'error', 2800);
         }
     };
 
@@ -264,10 +265,16 @@ export const NotificationSettings: React.FC = () => {
         setReminders(prev => prev.map(r => r.id === id ? { ...r, enabled: !r.enabled } : r));
     };
 
-    const deleteReminder = (id: string) => {
-        if (confirm('确定要删除这个提醒吗？')) {
-            setReminders(prev => prev.filter(r => r.id !== id));
-        }
+    const deleteReminder = async (id: string) => {
+        const ok = await confirmAction({
+            title: '删除提醒',
+            message: '确定要删除这个提醒吗？',
+            confirmText: '删除',
+            cancelText: '取消',
+            danger: true
+        });
+        if (!ok) return;
+        setReminders(prev => prev.filter(r => r.id !== id));
     };
 
     const openAddModal = () => {
@@ -321,7 +328,7 @@ export const NotificationSettings: React.FC = () => {
     return (
         <div className="relative flex min-h-screen w-full flex-col bg-background-light dark:bg-background-dark font-display text-gray-900 dark:text-gray-100">
             <header className="flex items-center justify-between p-4 sticky top-0 z-10 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-800/50">
-                <button onClick={() => navigate(-1)} className="flex size-10 items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/10">
+                <button onClick={() => navigate('/settings', { replace: true })} className="flex size-10 items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/10">
                     <Icon name="arrow_back_ios_new" className="text-gray-900 dark:text-white" />
                 </button>
                 <h1 className="text-lg font-bold">定时提醒</h1>
@@ -402,7 +409,7 @@ export const NotificationSettings: React.FC = () => {
                                     >
                                         <div className={`absolute top-1 left-1 size-4 bg-white rounded-full transition-transform ${reminder.enabled ? 'translate-x-4' : 'translate-x-0'}`}></div>
                                     </div>
-                                    <button onClick={() => deleteReminder(reminder.id)} className="p-2 text-gray-400 hover:text-red-500 transition-colors">
+                                    <button onClick={() => void deleteReminder(reminder.id)} className="p-2 text-gray-400 hover:text-red-500 transition-colors">
                                         <Icon name="delete" size={20} />
                                     </button>
                                 </div>
@@ -485,3 +492,11 @@ export const NotificationSettings: React.FC = () => {
         </div>
     );
 };
+
+
+
+
+
+
+
+

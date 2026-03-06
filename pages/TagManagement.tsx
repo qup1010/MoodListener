@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 标签管理页面
  * 三种情绪类型的标签管理，支持添加和删除
  */
@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { Icon } from '../components/Icon';
 import { fetchTags, createTag, deleteTag, TagsByMood, Tag } from '../services';
 import { MoodType } from '../types';
+import { confirmAction, showToast } from '../src/ui/feedback';
 
 export const TagManagement: React.FC = () => {
     const navigate = useNavigate();
@@ -34,7 +35,7 @@ export const TagManagement: React.FC = () => {
 
     const handleAddTag = async () => {
         if (!newTagName.trim()) {
-            alert('请输入标签名');
+            showToast('请输入标签名', 'error');
             return;
         }
 
@@ -54,14 +55,14 @@ export const TagManagement: React.FC = () => {
             setNewTagName('');
             setShowAddModal(false);
         } catch (error: any) {
-            alert(error.message || '添加失败');
+            showToast(error.message || '添加失败', 'error');
         } finally {
             setAdding(false);
         }
     };
 
     const handleDeleteTag = async (tag: Tag) => {
-        if (!confirm(`确定删除标签「${tag.name}」吗？`)) return;
+        if (!(await confirmAction({ title: '删除标签', message: `确定删除标签「${tag.name}」吗？`, confirmText: '删除', cancelText: '取消', danger: true }))) return;
 
         try {
             await deleteTag(tag.id);
@@ -73,7 +74,7 @@ export const TagManagement: React.FC = () => {
             }));
         } catch (error) {
             console.error('删除失败:', error);
-            alert('删除失败，请重试');
+            showToast('删除失败，请重试', 'error');
         }
     };
 
@@ -137,7 +138,7 @@ export const TagManagement: React.FC = () => {
         <div className="relative flex min-h-screen w-full flex-col bg-background-light dark:bg-background-dark font-display antialiased">
             <header className="flex items-center justify-between p-4 sticky top-0 z-50 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-800/50">
                 <button
-                    onClick={() => navigate(-1)}
+                    onClick={() => navigate('/settings', { replace: true })}
                     className="flex size-10 items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
                 >
                     <Icon name="arrow_back_ios_new" className="text-gray-900 dark:text-white" />
@@ -228,3 +229,7 @@ export const TagManagement: React.FC = () => {
         </div>
     );
 };
+
+
+
+

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Web 端备用存储层
  * 在浏览器环境中使用 localStorage 模拟 SQLite 功能
  */
@@ -15,13 +15,15 @@ export const isNativePlatform = () => {
 const DEFAULT_SETTINGS = {
     id: 1,
     notification_enabled: true,
+    notification_time: '20:00',
     reminders: [
         { id: '1', time: '20:00', enabled: true, days: [1, 2, 3, 4, 5, 6, 7] }
     ],
     theme_id: "classic",
     dark_mode: false,
     dark_mode_option: 'system',
-    amap_key: undefined
+    amap_key: undefined,
+    weekly_insight_cache: {}
 };
 
 const DEFAULT_PROFILE = {
@@ -148,7 +150,7 @@ export function webFetchEntries(filters: any = {}): any[] {
 
 export function webFetchEntry(id: number): any {
     const entries = getItem<any[]>(KEYS.ENTRIES, []);
-    const entry = entries.find(e => e.id === id);
+    const entry = entries.find(e => e.id?.toString() === id.toString());
     if (!entry) throw new Error('Entry not found');
     return entry;
 }
@@ -177,7 +179,7 @@ export function webCreateEntry(data: any): any {
 
     const now = new Date().toISOString();
     const newEntry = {
-        id: nextId,
+        id: nextId.toString(),
         date: data.date,
         time: data.time,
         mood: data.mood,
@@ -199,7 +201,7 @@ export function webCreateEntry(data: any): any {
 
 export function webUpdateEntry(id: number, data: any): any {
     const entries = getItem<any[]>(KEYS.ENTRIES, []);
-    const index = entries.findIndex(e => e.id === id);
+    const index = entries.findIndex(e => e.id?.toString() === id.toString());
     if (index === -1) throw new Error('Entry not found');
 
     const updated = {
@@ -215,23 +217,35 @@ export function webUpdateEntry(id: number, data: any): any {
 
 export function webDeleteEntry(id: number): void {
     let entries = getItem<any[]>(KEYS.ENTRIES, []);
-    entries = entries.filter(e => e.id !== id);
+    entries = entries.filter(e => e.id?.toString() !== id.toString());
     setItem(KEYS.ENTRIES, entries);
 }
 
 // ==================== Settings ====================
 
 export function webFetchSettings(): any {
-    return getItem(KEYS.SETTINGS, DEFAULT_SETTINGS);
+    const raw = getItem(KEYS.SETTINGS, DEFAULT_SETTINGS);
+    return {
+        ...DEFAULT_SETTINGS,
+        ...raw,
+        id: 1,
+        reminders: Array.isArray(raw?.reminders) ? raw.reminders : DEFAULT_SETTINGS.reminders,
+        weekly_insight_cache: raw?.weekly_insight_cache && typeof raw.weekly_insight_cache === 'object'
+            ? raw.weekly_insight_cache
+            : {}
+    };
 }
 
 export function webUpdateSettings(data: any): any {
-    const settings = getItem(KEYS.SETTINGS, DEFAULT_SETTINGS);
-    // 确保保留 id 字段，合并更新数据
+    const settings = webFetchSettings();
     const updated = {
         ...settings,
         ...data,
-        id: settings.id // 强制保留原始ID
+        id: 1,
+        reminders: Array.isArray(data?.reminders) ? data.reminders : settings.reminders,
+        weekly_insight_cache: data?.weekly_insight_cache && typeof data.weekly_insight_cache === 'object'
+            ? data.weekly_insight_cache
+            : settings.weekly_insight_cache
     };
     setItem(KEYS.SETTINGS, updated);
     return updated;
@@ -286,7 +300,7 @@ export function webCreateTag(data: any): any {
 
 export function webDeleteTag(id: number): void {
     let tags = getItem<any[]>(KEYS.TAGS, DEFAULT_TAGS);
-    tags = tags.filter(t => t.id !== id);
+    tags = tags.filter(t => t.id?.toString() !== id.toString());
     setItem(KEYS.TAGS, tags);
 }
 
@@ -352,6 +366,72 @@ export function webFetchStats(): any {
         mood_distribution: distribution,
         weekly_trend: weeklyTrend
     };
+}
+
+
+
+
+
+export interface WebBackupSnapshot {
+    entries: any[];
+    settings: any;
+    profile: any;
+    tags: any[];
+}
+
+export function webExportSnapshot(): WebBackupSnapshot {
+    return {
+        entries: getItem<any[]>(KEYS.ENTRIES, []),
+        settings: getItem<any>(KEYS.SETTINGS, DEFAULT_SETTINGS),
+        profile: getItem<any>(KEYS.PROFILE, DEFAULT_PROFILE),
+        tags: getItem<any[]>(KEYS.TAGS, DEFAULT_TAGS)
+    };
+}
+
+export function webImportSnapshot(snapshot: WebBackupSnapshot): void {
+    const entries = Array.isArray(snapshot.entries) ? snapshot.entries : [];
+    const tags = Array.isArray(snapshot.tags) ? snapshot.tags : [];
+
+    const settings = {
+        ...DEFAULT_SETTINGS,
+        ...(snapshot.settings || {}),
+        id: 1,
+        reminders: Array.isArray(snapshot.settings?.reminders) ? snapshot.settings.reminders : DEFAULT_SETTINGS.reminders,
+        weekly_insight_cache: snapshot.settings?.weekly_insight_cache || {}
+    };
+
+    const profile = {
+        ...DEFAULT_PROFILE,
+        ...(snapshot.profile || {}),
+        id: 1
+    };
+
+    setItem(KEYS.ENTRIES, entries);
+    setItem(KEYS.TAGS, tags);
+    setItem(KEYS.SETTINGS, settings);
+    setItem(KEYS.PROFILE, profile);
+
+    const maxEntryId = entries.reduce((max, entry) => {
+        const id = Number.parseInt(entry.id, 10);
+        return Number.isFinite(id) ? Math.max(max, id) : max;
+    }, 0);
+
+    const maxTagId = tags.reduce((max, tag) => {
+        const id = Number.parseInt(tag.id, 10);
+        return Number.isFinite(id) ? Math.max(max, id) : max;
+    }, 0);
+
+    setItem(KEYS.NEXT_ENTRY_ID, maxEntryId + 1);
+    setItem(KEYS.NEXT_TAG_ID, maxTagId + 1);
+
+    const option = settings.dark_mode_option === 'light' || settings.dark_mode_option === 'dark' || settings.dark_mode_option === 'system'
+        ? settings.dark_mode_option
+        : (settings.dark_mode ? 'dark' : 'light');
+
+    localStorage.setItem('darkMode', option);
+    if (settings.theme_id) {
+        localStorage.setItem('themeId', settings.theme_id);
+    }
 }
 
 

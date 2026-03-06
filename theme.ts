@@ -9,6 +9,62 @@ export const THEMES = [
     { id: 'sunset', name: '日落', primary: '249 115 22', primaryDark: '154 52 18', hex: '#f97316' },
 ];
 
+export interface UIThemeTokens {
+    brand: {
+        primary: string;
+        primaryStrong: string;
+    };
+    surface: {
+        pageLight: string;
+        pageDark: string;
+        cardLight: string;
+        cardDark: string;
+    };
+    text: {
+        primaryLight: string;
+        primaryDark: string;
+        secondaryLight: string;
+        secondaryDark: string;
+    };
+    accent: {
+        subtleLight: string;
+        subtleDark: string;
+    };
+    mood: {
+        positive: string;
+        neutral: string;
+        negative: string;
+    };
+}
+
+export const BASE_UI_TOKENS: UIThemeTokens = {
+    brand: {
+        primary: '#c2943e',
+        primaryStrong: '#355c5f'
+    },
+    surface: {
+        pageLight: '#f8f7f6',
+        pageDark: '#1e1b14',
+        cardLight: '#ffffff',
+        cardDark: '#28313D'
+    },
+    text: {
+        primaryLight: '#121617',
+        primaryDark: '#f5f5f5',
+        secondaryLight: '#6b7280',
+        secondaryDark: '#9ca3af'
+    },
+    accent: {
+        subtleLight: '#f7f3ea',
+        subtleDark: '#2a2a2a'
+    },
+    mood: {
+        positive: '#4ade80',
+        neutral: '#facc15',
+        negative: '#f87171'
+    }
+};
+
 export type DarkModeOption = 'light' | 'dark' | 'system';
 
 const normalizeDarkModeOption = (value: string | null | undefined): DarkModeOption => {
@@ -19,6 +75,8 @@ const normalizeDarkModeOption = (value: string | null | undefined): DarkModeOpti
 };
 
 export const initTheme = () => {
+    applyUiTokens(BASE_UI_TOKENS);
+
     const darkModeOption = normalizeDarkModeOption(localStorage.getItem('darkMode'));
     applyDarkMode(darkModeOption);
 
@@ -43,6 +101,30 @@ const applyDarkMode = (option: DarkModeOption) => {
     } else {
         document.documentElement.classList.remove('dark');
     }
+};
+
+const applyUiTokens = (tokens: UIThemeTokens) => {
+    const root = document.documentElement.style;
+
+    root.setProperty('--ui-brand-primary', tokens.brand.primary);
+    root.setProperty('--ui-brand-primary-strong', tokens.brand.primaryStrong);
+
+    root.setProperty('--ui-surface-page-light', tokens.surface.pageLight);
+    root.setProperty('--ui-surface-page-dark', tokens.surface.pageDark);
+    root.setProperty('--ui-surface-card-light', tokens.surface.cardLight);
+    root.setProperty('--ui-surface-card-dark', tokens.surface.cardDark);
+
+    root.setProperty('--ui-text-primary-light', tokens.text.primaryLight);
+    root.setProperty('--ui-text-primary-dark', tokens.text.primaryDark);
+    root.setProperty('--ui-text-secondary-light', tokens.text.secondaryLight);
+    root.setProperty('--ui-text-secondary-dark', tokens.text.secondaryDark);
+
+    root.setProperty('--ui-accent-subtle-light', tokens.accent.subtleLight);
+    root.setProperty('--ui-accent-subtle-dark', tokens.accent.subtleDark);
+
+    root.setProperty('--ui-mood-positive', tokens.mood.positive);
+    root.setProperty('--ui-mood-neutral', tokens.mood.neutral);
+    root.setProperty('--ui-mood-negative', tokens.mood.negative);
 };
 
 export const syncThemeFromSettings = async () => {
@@ -93,8 +175,7 @@ export const applyTheme = async (themeId: string) => {
 };
 
 const applyThemeColors = (theme: typeof THEMES[0]) => {
-    document.documentElement.style.setProperty('--app-primary', `rgb(${theme.primary})`);
-    document.documentElement.style.setProperty('--app-primary-dark', `rgb(${theme.primaryDark})`);
+    // CSS token 使用的是 rgb(var(--app-primary))，这里必须写入纯数值三元组
+    document.documentElement.style.setProperty('--app-primary', theme.primary);
+    document.documentElement.style.setProperty('--app-primary-dark', theme.primaryDark);
 };
-
-

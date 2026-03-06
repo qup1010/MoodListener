@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 记录详情页面
  * 查看、编辑和删除心情记录
  */
@@ -7,6 +7,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Icon } from '../components/Icon';
 import { fetchEntry, updateEntry, deleteEntry, fetchTagsByMood, Tag, UpdateEntryData } from '../services';
 import { Entry, MoodType } from '../types';
+import { confirmAction, showToast } from '../src/ui/feedback';
 
 export const EntryDetail: React.FC = () => {
     const navigate = useNavigate();
@@ -46,8 +47,8 @@ export const EntryDetail: React.FC = () => {
             setEditTags(data.tags || []);
         } catch (error) {
             console.error('加载记录失败:', error);
-            alert('记录不存在');
-            navigate(-1);
+            showToast('记录不存在', 'error');
+            navigate('/history', { replace: true });
         } finally {
             setLoading(false);
         }
@@ -64,7 +65,7 @@ export const EntryDetail: React.FC = () => {
 
     const handleSave = async () => {
         if (!entry || !editTitle.trim()) {
-            alert('标题不能为空');
+            showToast('标题不能为空', 'error');
             return;
         }
 
@@ -82,7 +83,7 @@ export const EntryDetail: React.FC = () => {
             setIsEditing(false);
         } catch (error) {
             console.error('保存失败:', error);
-            alert('保存失败，请重试');
+            showToast('保存失败，请重试', 'error');
         } finally {
             setSaving(false);
         }
@@ -90,14 +91,14 @@ export const EntryDetail: React.FC = () => {
 
     const handleDelete = async () => {
         if (!entry) return;
-        if (!confirm('确定要删除这条记录吗？此操作不可撤销。')) return;
+        if (!(await confirmAction({ title: '删除记录', message: '确定要删除这条记录吗？此操作不可撤销。', confirmText: '删除', cancelText: '取消', danger: true }))) return;
 
         try {
             await deleteEntry(parseInt(entry.id));
             navigate('/history', { replace: true });
         } catch (error) {
             console.error('删除失败:', error);
-            alert('删除失败，请重试');
+            showToast('删除失败，请重试', 'error');
         }
     };
 
@@ -138,7 +139,7 @@ export const EntryDetail: React.FC = () => {
         <div className="relative flex min-h-screen w-full flex-col bg-background-light dark:bg-background-dark font-display antialiased">
             <header className="flex items-center justify-between p-4 sticky top-0 z-50 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-800/50">
                 <button
-                    onClick={() => navigate(-1)}
+                    onClick={() => navigate('/history', { replace: true })}
                     className="flex size-10 items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
                 >
                     <Icon name="arrow_back_ios_new" className="text-gray-900 dark:text-white" />
@@ -306,3 +307,5 @@ export const EntryDetail: React.FC = () => {
         </div>
     );
 };
+
+

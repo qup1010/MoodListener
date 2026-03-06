@@ -1,4 +1,4 @@
-import { CapacitorSQLite, SQLiteConnection, SQLiteDBConnection } from '@capacitor-community/sqlite';
+﻿import { CapacitorSQLite, SQLiteConnection, SQLiteDBConnection } from '@capacitor-community/sqlite';
 
 const DB_NAME = 'moodlistener.db';
 const sqlite = new SQLiteConnection(CapacitorSQLite);
@@ -27,7 +27,9 @@ CREATE TABLE IF NOT EXISTS settings (
     reminders TEXT DEFAULT NULL,
     theme_id TEXT DEFAULT "classic",
     dark_mode INTEGER DEFAULT 0,
-    dark_mode_option TEXT DEFAULT "system"
+    dark_mode_option TEXT DEFAULT "system",
+    weekly_insight_cache TEXT DEFAULT NULL,
+    amap_key TEXT DEFAULT NULL
 );
 
 CREATE TABLE IF NOT EXISTS user_profile (
@@ -83,6 +85,12 @@ export const getDBConnection = async (): Promise<SQLiteDBConnection> => {
 
             try {
                 await dbConnection.execute('ALTER TABLE settings ADD COLUMN dark_mode_option TEXT DEFAULT "system"');
+            } catch {
+                // column exists
+            }
+
+            try {
+                await dbConnection.execute('ALTER TABLE settings ADD COLUMN weekly_insight_cache TEXT DEFAULT NULL');
             } catch {
                 // column exists
             }
