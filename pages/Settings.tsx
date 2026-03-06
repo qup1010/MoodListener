@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 设置页面
  * 个性化设置、数据管理和软件信息
  */
@@ -168,7 +168,7 @@ export const Settings: React.FC = () => {
       <header className="page-header px-4 py-4">
         <div>
           <h1 className="page-title">设置与管理</h1>
-          <p className="page-subtitle">把主题、提醒和数据安全放在一个清晰的地方。</p>
+          <p className="page-subtitle">常用设置都放在这里，改起来更顺手。</p>
         </div>
       </header>
 
@@ -257,7 +257,7 @@ export const Settings: React.FC = () => {
                   <div className={iconClassName}><Icon name="palette" className="text-[22px]" /></div>
                   <div>
                     <div className="font-semibold">颜色主题</div>
-                    <div className="text-xs text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">Quiet Gold Journal 为默认基准</div>
+                    <div className="text-xs text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">换一个你更喜欢的页面颜色</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -362,7 +362,7 @@ export const Settings: React.FC = () => {
                 <div className={iconClassName}><Icon name="info" className="text-[22px]" /></div>
                 <div>
                   <div className="font-semibold">软件信息</div>
-                  <div className="text-xs text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">版本 1.3.0</div>
+                  <div className="text-xs text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">版本 1.3.1</div>
                 </div>
               </div>
               <Icon name="chevron_right" size={20} className="text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]" />
@@ -371,8 +371,8 @@ export const Settings: React.FC = () => {
               <div className="flex items-center gap-3">
                 <div className={iconClassName}><Icon name="bug_report" className="text-[22px]" /></div>
                 <div>
-                  <div className="font-semibold">反馈问题</div>
-                  <div className="text-xs text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">有问题或建议都可以在这里提交</div>
+                  <div className="font-semibold">意见反馈</div>
+                  <div className="text-xs text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">有想法或遇到问题，都可以告诉我们</div>
                 </div>
               </div>
               <Icon name="open_in_new" className="text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)] text-[20px]" />

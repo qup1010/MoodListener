@@ -1,4 +1,4 @@
-export interface QuoteItem {
+﻿export interface QuoteItem {
   text: string;
   author: string;
 }
@@ -32,8 +32,8 @@ export const HOME_QUOTES: QuoteItem[] = [
 
 export const homeCopy = {
   heroEyebrow: '今日状态',
-  heroSupporting: '让今天的情绪被好好看见。',
-  heroAction: '开始记录',
+  heroSupporting: '看看今天的状态，也给自己一点留意。',
+  heroAction: '你感觉怎么样？',
   streakLabel: '连续记录',
   totalLabel: '总记录数',
   defaultSummary: '今天先用一条快速笔记开始。',
@@ -49,12 +49,12 @@ export const homeCopy = {
   insightEmptySupporting: '再写几条记录，趋势就会慢慢清晰。',
   quoteTitle: '今日一句',
   quoteAction: '点一下换一句',
-  headerSupport: '今天也照顾好自己。'
+  headerSupport: '慢一点，也没关系。'
 };
 
 export const emptyStateCopy = {
   historyTitle: '还没有记录',
-  historyBody: '先记下一次情绪，回顾会慢慢长出来。',
+  historyBody: '先记下一次心情，回头看会更有感觉。',
   historyAction: '开始记录',
   historySearchEmpty: '没有找到匹配记录',
   trendLocked: (remaining: number) => `再记录 ${remaining} 条，就能解锁趋势。`,
@@ -64,7 +64,7 @@ export const emptyStateCopy = {
 
 export const recordCopy = {
   title: '快速记录',
-  subtitle: '先选情绪，再补一两个活动就够了。',
+  subtitle: '先把当下记下来，其他的可以慢慢补。',
   moodPrompt: '你现在感觉怎么样？',
   activityTitle: '活动',
   recentActivityTitle: '最近常用',
@@ -91,7 +91,7 @@ export const recordCopy = {
 
 export const statsCopy = {
   title: '统计分析',
-  subtitle: '把波动压缩成几条容易理解的线索。',
+  subtitle: '看看最近的心情，慢慢发现自己的节奏。',
   summaryTitle: '最近状态',
   totalEntries: '总记录',
   streakDays: '连续天数',
@@ -100,8 +100,8 @@ export const statsCopy = {
   trendTitle: '记录趋势',
   distributionTitle: '5级情绪分布',
   activityTitle: '高频活动',
-  noTrend: '先保持几天记录，趋势会比空白更有意义。',
-  noData: '还没有足够的数据'
+  noTrend: '先记上几天，变化才会慢慢变清楚。',
+  noData: '还没有足够的记录'
 };
 
 export const ENTRY_PROMPTS: string[] = [

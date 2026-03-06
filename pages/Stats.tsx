@@ -1,4 +1,4 @@
-/**
+﻿/**
  * v1.3 统计页（v2 数据）
  */
 import React, { useEffect, useMemo, useState } from 'react';
@@ -156,7 +156,7 @@ export const Stats: React.FC = () => {
           {stats.total_entries === 0 ? (
             <div className="ui-empty-state">
               <p className="text-sm font-semibold">{statsCopy.noData}</p>
-              <p className="page-subtitle max-w-[16rem] mx-auto">先记录几次情绪，分布才会有参考意义。</p>
+              <p className="page-subtitle max-w-[16rem] mx-auto">先记几次心情，这里才会慢慢有变化。</p>
             </div>
           ) : (
             <div className="flex flex-col gap-3">

@@ -1,4 +1,4 @@
-import { MoodScore } from '../../types';
+﻿import { MoodScore } from '../../types';
 
 export interface MoodLevelMeta {
   score: MoodScore;
@@ -32,12 +32,19 @@ export const DEFAULT_ACTIVITY_GROUP_SEEDS: DefaultActivityGroupSeed[] = [
   {
     name: '情绪',
     activities: [
-      { name: '高兴', icon: 'mood' },
+      { name: '高兴', icon: 'sentiment_satisfied' },
       { name: '兴奋', icon: 'celebration' },
-      { name: '放松', icon: 'self_improvement' },
-      { name: '焦虑', icon: 'psychology' },
-      { name: '压力', icon: 'bolt' },
-      { name: '悲伤', icon: 'rainy' }
+      { name: '感激', icon: 'favorite' },
+      { name: '放松', icon: 'spa' },
+      { name: '满足', icon: 'wb_sunny' },
+      { name: '疲惫', icon: 'bedtime' },
+      { name: '没信心', icon: 'psychology_alt' },
+      { name: '无聊', icon: 'eco' },
+      { name: '焦虑', icon: 'thunderstorm' },
+      { name: '生气', icon: 'volcano' },
+      { name: '压力', icon: 'fitness_center' },
+      { name: '悲伤', icon: 'water_drop' },
+      { name: '绝望', icon: 'waves' }
     ]
   },
   {

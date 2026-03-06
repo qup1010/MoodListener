@@ -202,6 +202,32 @@ const repairDefaultActivitiesText = async (db: SQLiteDBConnection) => {
     }
 };
 
+const ensureDefaultActivities = async (db: SQLiteDBConnection) => {
+    const groupRows = await db.query('SELECT id, sort_order, is_default FROM activity_groups WHERE is_default = 1 ORDER BY sort_order ASC, id ASC');
+    const groups = groupRows.values || [];
+
+    for (const group of groups) {
+        const seed = DEFAULT_ACTIVITY_GROUP_SEEDS[group.sort_order] || DEFAULT_ACTIVITY_GROUP_SEEDS[groups.indexOf(group)];
+        if (!seed) continue;
+
+        const existingRows = await db.query(
+            'SELECT name FROM activities WHERE group_id = ? AND is_default = 1',
+            [group.id]
+        );
+        const existingNames = new Set((existingRows.values || []).map((row) => row.name));
+
+        for (let activityIndex = 0; activityIndex < seed.activities.length; activityIndex++) {
+            const activitySeed = seed.activities[activityIndex];
+            if (existingNames.has(activitySeed.name)) continue;
+
+            await db.run(
+                'INSERT INTO activities (group_id, name, icon, sort_order, is_default, is_archived) VALUES (?, ?, ?, ?, 1, 0)',
+                [group.id, activitySeed.name, activitySeed.icon, activityIndex]
+            );
+        }
+    }
+};
+
 const repairWeeklyInsightCache = async (db: SQLiteDBConnection) => {
     const result = await db.query('SELECT weekly_insight_cache FROM settings WHERE id = 1');
     const raw = result.values?.[0]?.weekly_insight_cache;
@@ -216,6 +242,7 @@ const repairWeeklyInsightCache = async (db: SQLiteDBConnection) => {
 
 const repairPersistedText = async (db: SQLiteDBConnection) => {
     await repairDefaultActivitiesText(db);
+    await ensureDefaultActivities(db);
     await repairWeeklyInsightCache(db);
 };
 

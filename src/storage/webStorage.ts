@@ -130,6 +130,49 @@ const repairStoredActivities = (activities: any[], groups: any[]) => {
     return { changed, value: next };
 };
 
+const ensureDefaultActivities = (activities: any[], groups: any[]) => {
+    let changed = false;
+    let nextId = activities.reduce((max, activity) => Math.max(max, Number(activity?.id) || 0), 0) + 1;
+    const nextActivities = [...activities];
+
+    groups.forEach((group, index) => {
+        if (!group?.is_default) return;
+
+        const seed = DEFAULT_ACTIVITY_GROUP_SEEDS[group.sort_order ?? index] || DEFAULT_ACTIVITY_GROUP_SEEDS[index];
+        if (!seed) return;
+
+        const existingNames = new Set(
+            nextActivities
+                .filter((activity) => Number(activity.group_id) === Number(group.id) && activity.is_default)
+                .map((activity) => activity.name)
+        );
+
+        seed.activities.forEach((activitySeed, activityIndex) => {
+            if (existingNames.has(activitySeed.name)) return;
+            changed = true;
+            nextActivities.push({
+                id: nextId++,
+                group_id: group.id,
+                name: activitySeed.name,
+                icon: activitySeed.icon,
+                sort_order: activityIndex,
+                is_default: true,
+                is_archived: false
+            });
+        });
+    });
+
+    if (changed) {
+        nextActivities.sort((a, b) => {
+            if (a.group_id !== b.group_id) return Number(a.group_id) - Number(b.group_id);
+            if (a.sort_order !== b.sort_order) return Number(a.sort_order) - Number(b.sort_order);
+            return Number(a.id) - Number(b.id);
+        });
+    }
+
+    return { changed, value: nextActivities, nextId };
+};
+
 const repairPersistedTextData = () => {
     const groups = getItem<any[]>(KEYS.ACTIVITY_GROUPS, DEFAULT_V2_SEEDS.groups);
     const activities = getItem<any[]>(KEYS.ACTIVITIES, DEFAULT_V2_SEEDS.activities);
@@ -137,10 +180,16 @@ const repairPersistedTextData = () => {
 
     const repairedGroups = repairStoredGroups(groups);
     const repairedActivities = repairStoredActivities(activities, repairedGroups.value);
+    const ensuredActivities = ensureDefaultActivities(repairedActivities.value, repairedGroups.value);
     const repairedCache = normalizeWeeklyInsightCache(settings?.weekly_insight_cache);
 
     if (repairedGroups.changed) setItem(KEYS.ACTIVITY_GROUPS, repairedGroups.value);
-    if (repairedActivities.changed) setItem(KEYS.ACTIVITIES, repairedActivities.value);
+    if (repairedActivities.changed || ensuredActivities.changed) {
+        setItem(KEYS.ACTIVITIES, ensuredActivities.value);
+    }
+    if (ensuredActivities.changed) {
+        setItem(KEYS.NEXT_ACTIVITY_ID, ensuredActivities.nextId);
+    }
     if (repairedCache !== settings?.weekly_insight_cache) {
         setItem(KEYS.SETTINGS, { ...settings, weekly_insight_cache: repairedCache });
     }

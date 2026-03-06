@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 通知设置页面
  * 配置每日提醒时间（支持多时段、多周期、智能文案）
  */
@@ -97,57 +97,6 @@ export const NotificationSettings: React.FC = () => {
         }
     };
 
-    // 测试通知功能（立即触发）
-    const sendTestNotification = async () => {
-        try {
-            const { LocalNotifications } = await import('@capacitor/local-notifications');
-
-            console.log('[Test] Sending test notification...');
-
-            // 检查权限
-            const permission = await LocalNotifications.checkPermissions();
-            if (permission.display !== 'granted') {
-                showToast('请先开启通知权限', 'error');
-                return;
-            }
-
-            // 创建渠道
-            await LocalNotifications.createChannel({
-                id: 'mood_reminders',
-                name: '心情提醒',
-                description: '定时提醒记录心情',
-                importance: 4,
-                visibility: 1,
-                sound: 'default',
-                vibration: true
-            });
-
-            // 发送测试通知（1秒后触发）
-            const testTime = new Date();
-            testTime.setSeconds(testTime.getSeconds() + 2);
-
-            await LocalNotifications.schedule({
-                notifications: [{
-                    id: 9999,
-                    title: '🎉 测试通知',
-                    body: '如果你看到这条通知，说明通知功能正常！',
-                    channelId: 'mood_reminders',
-                    schedule: {
-                        at: testTime
-                    },
-                    sound: 'default',
-                    actionTypeId: 'RECORD_ACTION',
-                    extra: { path: '/record' }
-                }]
-            });
-
-            console.log('[Test] Test notification scheduled for:', testTime);
-            showToast('测试通知已设置，将在2秒后触发', 'success', 2600);
-        } catch (error) {
-            console.error('[Test] Failed:', error);
-            showToast(`测试失败: ${error}`, 'error', 2800);
-        }
-    };
 
     const scheduleNotifications = async (isEnabled: boolean, currentReminders: Reminder[]) => {
         try {
@@ -358,14 +307,6 @@ export const NotificationSettings: React.FC = () => {
                     </div>
                 )}
 
-                {/* 测试通知按钮 */}
-                <button
-                    onClick={sendTestNotification}
-                    className="w-full p-4 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-2xl font-bold shadow-lg flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
-                >
-                    <Icon name="science" className="text-2xl" />
-                    <span>发送测试通知（2秒后触发）</span>
-                </button>
 
                 {/* 总开关 */}
                 <div className="flex items-center justify-between p-4 bg-white dark:bg-card-dark rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
