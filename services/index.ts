@@ -1,4 +1,4 @@
-/**
+﻿/**
  * API 服务层封装 - 本地离线版
  * 自动检测运行环境，在 Web 使用 localStorage，在原生使用 SQLite
  */

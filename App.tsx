@@ -14,7 +14,6 @@ const Stats = lazy(() => import('./pages/Stats').then(m => ({ default: m.Stats }
 const Settings = lazy(() => import('./pages/Settings').then(m => ({ default: m.Settings })));
 const NotificationSettings = lazy(() => import('./pages/NotificationSettings').then(m => ({ default: m.NotificationSettings })));
 const AboutInfo = lazy(() => import('./pages/AboutInfo').then(m => ({ default: m.AboutInfo })));
-const ProfileSettings = lazy(() => import('./pages/ProfileSettings').then(m => ({ default: m.ProfileSettings })));
 const TagManagement = lazy(() => import('./pages/TagManagement').then(m => ({ default: m.TagManagement })));
 const EntryDetail = lazy(() => import('./pages/EntryDetail').then(m => ({ default: m.EntryDetail })));
 
@@ -109,7 +108,7 @@ const NativeBackHandler: React.FC = () => {
 };
 
 const RouteFallback: React.FC = () => (
-  <div className="min-h-screen flex items-center justify-center text-sm text-gray-500 dark:text-gray-400 bg-background-light dark:bg-background-dark">
+  <div className="flex min-h-screen items-center justify-center bg-background-light text-sm text-gray-500 dark:bg-background-dark dark:text-gray-400">
     加载中...
   </div>
 );
@@ -171,9 +170,9 @@ const App: React.FC = () => {
             <Route path="/settings" element={<Layout><Settings /></Layout>} />
             <Route path="/settings/notifications" element={<NotificationSettings />} />
             <Route path="/settings/about" element={<AboutInfo />} />
-            <Route path="/settings/profile" element={<ProfileSettings />} />
             <Route path="/settings/tags" element={<TagManagement />} />
             <Route path="/entry/:id" element={<EntryDetail />} />
+            <Route path="*" element={<Navigate to="/home" replace />} />
           </Routes>
         </Suspense>
       </HashRouter>
@@ -182,7 +181,3 @@ const App: React.FC = () => {
 };
 
 export default App;
-
-
-
-

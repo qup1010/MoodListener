@@ -1,8 +1,4 @@
-/**
- * 设置页面
- * 个性化设置、数据管理和软件信息
- */
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '../components/Icon';
 import { THEMES, toggleDarkMode, applyTheme, DarkModeOption, syncThemeFromSettings } from '../theme';
@@ -43,7 +39,7 @@ export const Settings: React.FC = () => {
       if (!settings.notification_enabled) {
         setRemindersText('未开启');
       } else {
-        const count = settings.reminders?.filter(r => r.enabled).length || 0;
+        const count = settings.reminders?.filter((item) => item.enabled).length || 0;
         setRemindersText(count > 0 ? `已开启 ${count} 个提醒` : '暂无提醒');
       }
     } catch (error) {
@@ -182,19 +178,8 @@ export const Settings: React.FC = () => {
         />
 
         <section>
-          <div className="px-1 mb-3 text-xs font-black uppercase tracking-[0.18em] text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">个性化设置</div>
+          <div className="mb-3 px-1 text-xs font-black uppercase tracking-[0.18em] text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">个性化设置</div>
           <div className="ui-card overflow-hidden">
-            <div className={`${rowClassName} border-b border-[var(--ui-border-subtle-light)] dark:border-[var(--ui-border-subtle-dark)]`} onClick={() => navigate('/settings/profile')}>
-              <div className="flex items-center gap-3">
-                <div className={iconClassName}><Icon name="person" className="text-[22px]" /></div>
-                <div>
-                  <div className="font-semibold">个人资料</div>
-                  <div className="text-xs text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">设置名称和头像</div>
-                </div>
-              </div>
-              <Icon name="chevron_right" size={20} className="text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]" />
-            </div>
-
             <div className={`${rowClassName} border-b border-[var(--ui-border-subtle-light)] dark:border-[var(--ui-border-subtle-dark)]`} onClick={() => navigate('/settings/tags')}>
               <div className="flex items-center gap-3">
                 <div className={iconClassName}><Icon name="sell" className="text-[22px]" /></div>
@@ -219,7 +204,7 @@ export const Settings: React.FC = () => {
               </button>
 
               {showDarkModePicker && (
-                <div className="px-4 pb-4 flex gap-3 justify-center animate-in fade-in slide-in-from-top-2">
+                <div className="flex justify-center gap-3 px-4 pb-4 animate-in fade-in slide-in-from-top-2">
                   {[
                     { id: 'light' as DarkModeOption, label: '关闭', icon: 'light_mode' },
                     { id: 'dark' as DarkModeOption, label: '开启', icon: 'dark_mode' },
@@ -228,9 +213,9 @@ export const Settings: React.FC = () => {
                     <button
                       key={option.id}
                       onClick={() => handleDarkModeChange(option.id)}
-                      className={`flex flex-col items-center gap-2 px-4 py-3 rounded-2xl border ${darkMode === option.id
-                        ? 'bg-primary text-white border-primary shadow-sm'
-                        : 'bg-[var(--ui-surface-muted-light)] dark:bg-[var(--ui-surface-muted-dark)] border-[var(--ui-border-subtle-light)] dark:border-[var(--ui-border-subtle-dark)]'}`}
+                      className={`flex flex-col items-center gap-2 rounded-2xl border px-4 py-3 ${darkMode === option.id
+                        ? 'border-primary bg-primary text-white shadow-sm'
+                        : 'border-[var(--ui-border-subtle-light)] bg-[var(--ui-surface-muted-light)] dark:border-[var(--ui-border-subtle-dark)] dark:bg-[var(--ui-surface-muted-dark)]'}`}
                     >
                       <Icon name={option.icon} size={22} />
                       <span className="text-xs font-semibold">{option.label}</span>
@@ -261,21 +246,21 @@ export const Settings: React.FC = () => {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="size-5 rounded-full border border-[var(--ui-border-subtle-light)] dark:border-[var(--ui-border-subtle-dark)]" style={{ backgroundColor: THEMES.find(t => t.id === currentTheme)?.hex }} />
+                  <div className="size-5 rounded-full border border-[var(--ui-border-subtle-light)] dark:border-[var(--ui-border-subtle-dark)]" style={{ backgroundColor: THEMES.find((item) => item.id === currentTheme)?.hex }} />
                   <Icon name={showThemePicker ? 'expand_less' : 'expand_more'} size={20} className="text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]" />
                 </div>
               </button>
 
               {showThemePicker && (
-                <div className="px-4 pb-5 pt-1 flex flex-wrap gap-4 justify-center animate-in fade-in slide-in-from-top-2">
+                <div className="flex flex-wrap justify-center gap-4 px-4 pb-5 pt-1 animate-in fade-in slide-in-from-top-2">
                   {THEMES.map((theme) => (
                     <button key={theme.id} onClick={() => handleThemeChange(theme.id)} className="group relative flex flex-col items-center gap-1">
                       <div
-                        className={`size-10 rounded-full border-2 transition-all ${currentTheme === theme.id ? 'border-[var(--ui-brand-primary)] scale-110 ring-4 ring-[var(--ui-focus-ring)]' : 'border-white dark:border-[var(--ui-border-subtle-dark)] group-hover:scale-105'}`}
+                        className={`size-10 rounded-full border-2 transition-all ${currentTheme === theme.id ? 'scale-110 border-[var(--ui-brand-primary)] ring-4 ring-[var(--ui-focus-ring)]' : 'border-white group-hover:scale-105 dark:border-[var(--ui-border-subtle-dark)]'}`}
                         style={{ backgroundColor: theme.hex }}
                       >
                         {currentTheme === theme.id && (
-                          <div className="flex w-full h-full items-center justify-center">
+                          <div className="flex h-full w-full items-center justify-center">
                             <Icon name="check" className="text-white" size={18} />
                           </div>
                         )}
@@ -290,13 +275,13 @@ export const Settings: React.FC = () => {
         </section>
 
         <section>
-          <div className="px-1 mb-3 text-xs font-black uppercase tracking-[0.18em] text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">数据管理</div>
+          <div className="mb-3 px-1 text-xs font-black uppercase tracking-[0.18em] text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">数据管理</div>
           <div className="flex flex-col gap-3">
             <div className="ui-card ui-card--subtle p-4">
-              <div className="flex items-start justify-between gap-3 mb-4">
+              <div className="mb-4 flex items-start justify-between gap-3">
                 <div>
                   <h3 className="text-sm font-bold">备份（安全、可恢复）</h3>
-                  <p className="text-xs text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)] mt-1">加密备份只保存在本地文件，恢复时需要口令。</p>
+                  <p className="mt-1 text-xs text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">加密备份只保存在本地文件，恢复时需要口令。</p>
                 </div>
                 <Icon name="enhanced_encryption" className="text-primary" />
               </div>
@@ -306,10 +291,10 @@ export const Settings: React.FC = () => {
             </div>
 
             <div className="ui-card p-4">
-              <div className="flex items-start justify-between gap-3 mb-4">
+              <div className="mb-4 flex items-start justify-between gap-3">
                 <div>
                   <h3 className="text-sm font-bold">导出（外部使用）</h3>
-                  <p className="text-xs text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)] mt-1">用于表格分析或其他工具查看，不用于完整恢复。</p>
+                  <p className="mt-1 text-xs text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">用于表格分析或其他工具查看，不用于完整恢复。</p>
                 </div>
                 <Icon name="ios_share" className="text-primary" />
               </div>
@@ -324,7 +309,7 @@ export const Settings: React.FC = () => {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h3 className="text-sm font-bold">从备份恢复</h3>
-                  <p className="text-xs text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)] mt-1">用你保存的加密备份，把数据恢复到当时的状态。</p>
+                  <p className="mt-1 text-xs text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">用你保存的加密备份，把数据恢复到当时的状态。</p>
                 </div>
                 <Icon name="settings_backup_restore" className="text-primary" />
               </div>
@@ -342,7 +327,7 @@ export const Settings: React.FC = () => {
               </div>
 
               <button
-                className="ui-action-secondary mt-4 w-full min-h-[2.9rem] text-sm font-bold"
+                className="ui-action-secondary mt-4 min-h-[2.9rem] w-full text-sm font-bold"
                 onClick={triggerSecureImport}
                 disabled={secureImporting || secureExporting}
               >
@@ -355,9 +340,9 @@ export const Settings: React.FC = () => {
         </section>
 
         <section>
-          <div className="px-1 mb-3 text-xs font-black uppercase tracking-[0.18em] text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">关于</div>
+          <div className="mb-3 px-1 text-xs font-black uppercase tracking-[0.18em] text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">关于</div>
           <div className="ui-card overflow-hidden">
-            <button className={`${rowClassName} border-b border-[var(--ui-border-subtle-light)] dark:border-[var(--ui-border-subtle-dark)] w-full`} onClick={() => navigate('/settings/about')}>
+            <button className={`${rowClassName} w-full border-b border-[var(--ui-border-subtle-light)] dark:border-[var(--ui-border-subtle-dark)]`} onClick={() => navigate('/settings/about')}>
               <div className="flex items-center gap-3">
                 <div className={iconClassName}><Icon name="info" className="text-[22px]" /></div>
                 <div>
@@ -375,16 +360,16 @@ export const Settings: React.FC = () => {
                   <div className="text-xs text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">有想法或遇到问题，都可以告诉我们</div>
                 </div>
               </div>
-              <Icon name="open_in_new" className="text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)] text-[20px]" />
+              <Icon name="open_in_new" className="text-[20px] text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]" />
             </button>
           </div>
         </section>
 
         <div className="ui-card ui-card--subtle p-4 text-center">
           <p className="text-sm font-bold">MoodListener - 听见你的情绪</p>
-          <p className="text-xs text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)] mt-1">Made with heart for your mental health</p>
-          <div className="mt-4 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-full bg-white/70 dark:bg-white/5 border border-[var(--ui-border-subtle-light)] dark:border-[var(--ui-border-subtle-dark)]">
-            <Icon name="verified_user" className="text-primary text-[14px]" />
+          <p className="mt-1 text-xs text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">Made with heart for your mental health</p>
+          <div className="mt-4 inline-flex items-center justify-center gap-2 rounded-full border border-[var(--ui-border-subtle-light)] bg-white/70 px-3 py-2 dark:border-[var(--ui-border-subtle-dark)] dark:bg-white/5">
+            <Icon name="verified_user" className="text-[14px] text-primary" />
             <span className="text-[11px] font-bold uppercase tracking-[0.18em]">本地存储已开启</span>
           </div>
         </div>

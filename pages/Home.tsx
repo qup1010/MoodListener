@@ -1,11 +1,7 @@
-﻿/**
- * v1.3 首页
- */
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '../components/Icon';
-import { fetchProfile, fetchStatsV2, getWeeklyInsightV2, refreshWeeklyInsightV2, saveRecordDraftV2, UserProfile, WeeklyInsightV2 } from '../services';
-import { getInitialAvatarDataUrl } from '../src/utils/avatar';
+import { fetchStatsV2, getWeeklyInsightV2, refreshWeeklyInsightV2, saveRecordDraftV2, WeeklyInsightV2 } from '../services';
 import { HOME_QUOTES, homeCopy } from '../src/constants/copywriting';
 import { HomeHeroState, HomeInsightCardModel, MoodScore } from '../types';
 import { showToast } from '../src/ui/feedback';
@@ -14,7 +10,6 @@ import { MOOD_LEVELS } from '../src/constants/moodV2';
 export const Home: React.FC = () => {
   const navigate = useNavigate();
   const [stats, setStats] = useState<{ total_entries: number; streak_days: number }>({ total_entries: 0, streak_days: 0 });
-  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [insight, setInsight] = useState<WeeklyInsightV2 | null>(null);
   const [insightLoading, setInsightLoading] = useState(true);
   const [insightRefreshing, setInsightRefreshing] = useState(false);
@@ -28,14 +23,12 @@ export const Home: React.FC = () => {
   const loadData = async () => {
     setInsightLoading(true);
     try {
-      const [statsData, userProfile, weeklyInsight] = await Promise.all([
+      const [statsData, weeklyInsight] = await Promise.all([
         fetchStatsV2(),
-        fetchProfile(),
         getWeeklyInsightV2()
       ]);
 
       setStats({ total_entries: statsData.total_entries, streak_days: statsData.streak_days });
-      setProfile(userProfile);
       setInsight(weeklyInsight);
     } catch (error) {
       console.error('加载首页数据失败:', error);
@@ -68,14 +61,9 @@ export const Home: React.FC = () => {
     return '夜深了';
   }, []);
 
-  const username = profile?.username || '朋友';
-  const avatar = profile?.avatar_url && (profile.avatar_url.startsWith('http') || profile.avatar_url.startsWith('data:'))
-    ? profile.avatar_url
-    : getInitialAvatarDataUrl(username, '#355c5f');
-
   const heroState: HomeHeroState = useMemo(() => ({
     greeting,
-    username,
+    username: '',
     summary: stats.total_entries === 0
       ? homeCopy.defaultSummary
       : stats.streak_days >= 7
@@ -84,7 +72,7 @@ export const Home: React.FC = () => {
     streakLabel: `${stats.streak_days} 天`,
     totalLabel: `${stats.total_entries} 条`,
     ctaLabel: homeCopy.heroAction
-  }), [greeting, username, stats]);
+  }), [greeting, stats]);
 
   const handleQuickStart = async (score: MoodScore) => {
     try {
@@ -122,46 +110,41 @@ export const Home: React.FC = () => {
   }, [insight]);
 
   return (
-    <div className="page-shell flex flex-col min-h-screen animate-in fade-in slide-in-from-bottom-2">
+    <div className="page-shell flex min-h-screen flex-col animate-in fade-in slide-in-from-bottom-2">
       <header className="page-header px-5 pt-8 pb-2">
-        <div className="flex justify-between items-start gap-3">
-          <div>
-            <h1 className="page-title">{heroState.greeting}，{heroState.username}</h1>
-            <p className="page-subtitle">{homeCopy.headerSupport}</p>
-          </div>
-          <button
-            className="size-12 shrink-0 rounded-full bg-white/70 dark:bg-white/5 overflow-hidden border border-[var(--ui-border-subtle-light)] dark:border-[var(--ui-border-subtle-dark)] shadow-sm"
-            onClick={() => navigate('/settings/profile')}
-          >
-            <img src={avatar} alt="avatar" className="w-full h-full object-cover" />
-          </button>
+        <div>
+          <h1 className="page-title">{heroState.greeting}</h1>
+          <p className="page-subtitle">{homeCopy.headerSupport}</p>
         </div>
       </header>
 
-      <main className="page-content flex-1 !pt-2 pb-6 overflow-y-auto">
+      <main className="page-content flex-1 !pt-2 overflow-y-auto pb-6">
         <section className="ui-card ui-card--hero p-5 animate-in fade-in slide-in-from-bottom-2">
-          <div className="rounded-[28px] border border-[var(--ui-border-strong-light)] dark:border-[var(--ui-border-strong-dark)] bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.26),rgba(255,255,255,0)_64%)] dark:bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.09),rgba(255,255,255,0)_64%)] p-5 shadow-[0_24px_60px_-42px_rgba(24,22,18,0.42)]">
-            <div className="mb-4.5">
-              <div className="flex items-center gap-2.5">
-                <div className="text-[1.22rem] leading-tight font-extrabold text-[var(--ui-text-primary-light)] dark:text-[var(--ui-text-primary-dark)]">{heroState.ctaLabel}</div>
-                <span className="inline-flex size-2.5 rounded-full bg-primary shadow-[0_0_18px_rgba(var(--app-primary),0.55)]" />
+          <div className="rounded-[28px] border border-[var(--ui-border-strong-light)] bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.26),rgba(255,255,255,0)_64%)] p-5 shadow-[0_24px_60px_-42px_rgba(24,22,18,0.42)] dark:border-[var(--ui-border-strong-dark)] dark:bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.09),rgba(255,255,255,0)_64%)]">
+            <div className="mb-4">
+              <div className="text-[1.22rem] font-extrabold leading-tight text-[var(--ui-text-primary-light)] dark:text-[var(--ui-text-primary-dark)]">
+                {heroState.ctaLabel}
               </div>
-              <div className="mt-1.5 max-w-[16rem] text-[13px] leading-5 text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">选一个最接近现在的状态，马上开始记录。</div>
+              <div className="mt-2 text-[13px] leading-6 text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">
+                选一个最接近现在的状态，马上开始记录。
+              </div>
             </div>
 
-            <div className="grid grid-cols-5 gap-2.5">
+            <div className="grid grid-cols-5 gap-2">
               {MOOD_LEVELS.map((item) => (
                 <button
                   key={item.score}
                   type="button"
                   onClick={() => void handleQuickStart(item.score)}
-                  className="rounded-[24px] border border-[var(--ui-border-subtle-light)] dark:border-[var(--ui-border-subtle-dark)] bg-white/88 dark:bg-white/[0.05] px-2 py-4 transition-all hover:-translate-y-1 hover:border-white/60 active:scale-[0.98]"
+                  className="rounded-[24px] border border-[var(--ui-border-subtle-light)] bg-white/88 px-1.5 py-4 transition-all hover:-translate-y-1 hover:border-white/60 active:scale-[0.98] dark:border-[var(--ui-border-subtle-dark)] dark:bg-white/[0.05]"
                   style={{ boxShadow: '0 18px 34px -26px ' + item.color }}
                 >
                   <div className="mx-auto flex size-12 items-center justify-center rounded-full border border-white/60 dark:border-white/10" style={{ backgroundColor: item.softColor, color: item.color }}>
                     <Icon name={item.icon} size={24} />
                   </div>
-                  <div className="mt-3 text-center text-[12px] font-semibold leading-4 text-[var(--ui-text-primary-light)] dark:text-[var(--ui-text-primary-dark)]">{item.label}</div>
+                  <div className="mt-3 whitespace-nowrap text-center text-[11px] font-semibold leading-4 text-[var(--ui-text-primary-light)] dark:text-[var(--ui-text-primary-dark)]">
+                    {item.label}
+                  </div>
                 </button>
               ))}
             </div>
@@ -169,10 +152,10 @@ export const Home: React.FC = () => {
         </section>
 
         <section className="ui-card ui-card--subtle p-5 animate-in fade-in slide-in-from-bottom-2">
-          <div className="flex items-start justify-between gap-4 mb-5">
+          <div className="mb-5 flex items-start justify-between gap-4">
             <div>
               <p className="ui-card-title mb-2">{homeCopy.heroEyebrow}</p>
-              <h2 className="text-[1.38rem] leading-tight font-extrabold text-[var(--ui-text-primary-light)] dark:text-[var(--ui-text-primary-dark)] max-w-[16rem]">
+              <h2 className="max-w-[16rem] text-[1.38rem] font-extrabold leading-tight text-[var(--ui-text-primary-light)] dark:text-[var(--ui-text-primary-dark)]">
                 {heroState.summary}
               </h2>
               <p className="page-subtitle max-w-[16rem]">{homeCopy.heroSupporting}</p>
@@ -184,18 +167,18 @@ export const Home: React.FC = () => {
 
           <div className="grid grid-cols-2 gap-3">
             <div className="ui-kpi">
-              <div className="text-[11px] font-semibold text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)] mb-1">{homeCopy.streakLabel}</div>
+              <div className="mb-1 text-[11px] font-semibold text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">{homeCopy.streakLabel}</div>
               <div className="text-lg font-extrabold">{heroState.streakLabel}</div>
             </div>
             <div className="ui-kpi">
-              <div className="text-[11px] font-semibold text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)] mb-1">{homeCopy.totalLabel}</div>
+              <div className="mb-1 text-[11px] font-semibold text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">{homeCopy.totalLabel}</div>
               <div className="text-lg font-extrabold">{heroState.totalLabel}</div>
             </div>
           </div>
         </section>
 
         <section className="ui-card p-4 animate-in fade-in slide-in-from-bottom-2">
-          <div className="flex items-start justify-between gap-3 mb-3">
+          <div className="mb-3 flex items-start justify-between gap-3">
             <div>
               <p className="ui-card-title mb-1">{insightCard.title}</p>
               <p className="text-xs text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">{insightCard.subtitle}</p>
@@ -221,10 +204,10 @@ export const Home: React.FC = () => {
             <div className="flex flex-col gap-4">
               <div className="flex items-end justify-between gap-4">
                 <div>
-                  <div className="text-[11px] font-semibold text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)] mb-1">{insightCard.keyLabel}</div>
+                  <div className="mb-1 text-[11px] font-semibold text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">{insightCard.keyLabel}</div>
                   <div className="text-3xl font-extrabold tracking-tight text-primary">{insightCard.keyValue}</div>
                 </div>
-                <div className="rounded-2xl px-3 py-2 bg-[var(--ui-surface-muted-light)] dark:bg-[var(--ui-surface-muted-dark)] text-right">
+                <div className="rounded-2xl bg-[var(--ui-surface-muted-light)] px-3 py-2 text-right dark:bg-[var(--ui-surface-muted-dark)]">
                   <div className="text-[11px] text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">本周状态</div>
                   <div className="text-sm font-semibold">{insightCard.supportingLabel}</div>
                 </div>
@@ -233,7 +216,7 @@ export const Home: React.FC = () => {
               {insightCard.topActivities.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                   {insightCard.topActivities.map((item) => (
-                    <span key={item} className="px-3 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary">
+                    <span key={item} className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
                       {item}
                     </span>
                   ))}
@@ -241,14 +224,14 @@ export const Home: React.FC = () => {
               )}
 
               <div className="ui-card ui-card--subtle p-3">
-                <div className="text-[11px] font-semibold text-primary mb-1">一句建议</div>
+                <div className="mb-1 text-[11px] font-semibold text-primary">一句建议</div>
                 <p className="text-sm leading-6 text-[var(--ui-text-primary-light)] dark:text-[var(--ui-text-primary-dark)]">{insightCard.suggestion}</p>
               </div>
             </div>
           )}
         </section>
 
-        <section className="ui-card ui-card--subtle p-5 cursor-pointer animate-in fade-in slide-in-from-bottom-2" onClick={() => setQuoteIndex((prev) => (prev + 1) % HOME_QUOTES.length)}>
+        <section className="ui-card ui-card--subtle cursor-pointer p-5 animate-in fade-in slide-in-from-bottom-2" onClick={() => setQuoteIndex((prev) => (prev + 1) % HOME_QUOTES.length)}>
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="ui-card-title mb-1">{homeCopy.quoteTitle}</p>
@@ -258,8 +241,8 @@ export const Home: React.FC = () => {
               <Icon name="auto_awesome" size={18} />
             </div>
           </div>
-          <p className="mt-4 text-[1.02rem] leading-8 font-medium italic text-[var(--ui-text-primary-light)] dark:text-[var(--ui-text-primary-dark)]">“{HOME_QUOTES[quoteIndex].text}”</p>
-          <div className="text-right mt-4 text-xs font-bold text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">— {HOME_QUOTES[quoteIndex].author}</div>
+          <p className="mt-4 text-[1.02rem] font-medium italic leading-8 text-[var(--ui-text-primary-light)] dark:text-[var(--ui-text-primary-dark)]">“{HOME_QUOTES[quoteIndex].text}”</p>
+          <div className="mt-4 text-right text-xs font-bold text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">— {HOME_QUOTES[quoteIndex].author}</div>
         </section>
       </main>
     </div>
