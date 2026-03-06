@@ -1,4 +1,4 @@
-﻿export interface QuoteItem {
+export interface QuoteItem {
   text: string;
   author: string;
 }
@@ -29,6 +29,80 @@ export const HOME_QUOTES: QuoteItem[] = [
   { text: '你不是情绪本身，你是能够看见情绪的人。', author: '佚名' },
   { text: '慢慢来，答案会在行动里出现。', author: '佚名' }
 ];
+
+export const homeCopy = {
+  heroEyebrow: '今日状态',
+  heroSupporting: '让今天的情绪被好好看见。',
+  heroAction: '开始记录',
+  streakLabel: '连续记录',
+  totalLabel: '总记录数',
+  defaultSummary: '今天先用一条快速笔记开始。',
+  streakSummary: (days: number) => `你已连续记录 ${days} 天，节奏很好。`,
+  totalSummary: (count: number) => `你已记录 ${count} 条，继续保持。`,
+  insightTitle: '每周洞察',
+  insightRefresh: '刷新',
+  insightRefreshing: '刷新中...',
+  insightLoadingTitle: '正在整理本周节奏',
+  insightLoadingBody: '稍等一下，我把最近 7 天的变化压缩成一张卡片。',
+  insightEmptyKey: '待解锁',
+  insightEmptyLabel: '每周节奏',
+  insightEmptySupporting: '再写几条记录，趋势就会慢慢清晰。',
+  quoteTitle: '今日一句',
+  quoteAction: '点一下换一句',
+  headerSupport: '今天也照顾好自己。'
+};
+
+export const emptyStateCopy = {
+  historyTitle: '还没有记录',
+  historyBody: '先记下一次情绪，回顾会慢慢长出来。',
+  historyAction: '开始记录',
+  historySearchEmpty: '没有找到匹配记录',
+  trendLocked: (remaining: number) => `再记录 ${remaining} 条，就能解锁趋势。`,
+  trendUnlockedHint: '记录越稳定，变化越容易看清。',
+  statsNoActivities: '先记录几次活动，常见触发因素会出现在这里。'
+};
+
+export const recordCopy = {
+  title: '快速记录',
+  subtitle: '先选情绪，再补一两个活动就够了。',
+  moodPrompt: '你现在感觉怎么样？',
+  activityTitle: '活动',
+  recentActivityTitle: '最近常用',
+  quickNoteTitle: '快速笔记',
+  quickNotePlaceholder: '写下一句话，给此刻留个标记...',
+  openFullNote: '打开完整注释',
+  extrasTitle: '更多选项',
+  extrasClosedHint: '位置、照片等可选内容',
+  extrasLocationDone: '已填写位置',
+  extrasImageCount: (count: number) => `已添加 ${count} 张图片`,
+  locationLabel: '位置（可选）',
+  locationPlaceholder: '例如：公司、家里、地铁',
+  imagesLabel: '照片（可选）',
+  addImage: '添加照片',
+  imageUploading: '上传中...',
+  backConfirmTitle: '放弃当前记录？',
+  backConfirmMessage: '草稿尚未保存，是否离开？',
+  backConfirmLeave: '离开',
+  backConfirmStay: '继续编辑',
+  save: '保存',
+  saving: '保存中...',
+  saveSuccess: '记录已保存'
+};
+
+export const statsCopy = {
+  title: '统计分析',
+  subtitle: '把波动压缩成几条容易理解的线索。',
+  summaryTitle: '最近状态',
+  totalEntries: '总记录',
+  streakDays: '连续天数',
+  averageMood7d: '7天均分',
+  averageMood30d: '30天均分',
+  trendTitle: '记录趋势',
+  distributionTitle: '5级情绪分布',
+  activityTitle: '高频活动',
+  noTrend: '先保持几天记录，趋势会比空白更有意义。',
+  noData: '还没有足够的数据'
+};
 
 export const ENTRY_PROMPTS: string[] = [
   '今天哪一个瞬间最触动你？',

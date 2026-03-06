@@ -1,4 +1,4 @@
-﻿export const getInitialAvatarDataUrl = (name: string, background = '#3b82f6'): string => {
+export const getInitialAvatarDataUrl = (name: string, background = '#3b82f6'): string => {
   const initial = (name || '?').trim().charAt(0).toUpperCase() || '?';
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
   <rect width="128" height="128" rx="64" fill="${background}" />

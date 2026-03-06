@@ -19,6 +19,10 @@ export interface UIThemeTokens {
         pageDark: string;
         cardLight: string;
         cardDark: string;
+        mutedLight: string;
+        mutedDark: string;
+        heroLight: string;
+        heroDark: string;
     };
     text: {
         primaryLight: string;
@@ -26,9 +30,22 @@ export interface UIThemeTokens {
         secondaryLight: string;
         secondaryDark: string;
     };
+    border: {
+        subtleLight: string;
+        subtleDark: string;
+        strongLight: string;
+        strongDark: string;
+    };
     accent: {
         subtleLight: string;
         subtleDark: string;
+    };
+    elevation: {
+        card: string;
+        hero: string;
+    };
+    focus: {
+        ring: string;
     };
     mood: {
         positive: string;
@@ -43,20 +60,37 @@ export const BASE_UI_TOKENS: UIThemeTokens = {
         primaryStrong: '#355c5f'
     },
     surface: {
-        pageLight: '#f8f7f6',
-        pageDark: '#1e1b14',
-        cardLight: '#ffffff',
-        cardDark: '#28313D'
+        pageLight: '#f6f1e8',
+        pageDark: '#17140f',
+        cardLight: '#fffdf8',
+        cardDark: '#24211b',
+        mutedLight: '#f3ede1',
+        mutedDark: '#1f1b15',
+        heroLight: '#f4e9d6',
+        heroDark: '#201a13'
     },
     text: {
-        primaryLight: '#121617',
-        primaryDark: '#f5f5f5',
-        secondaryLight: '#6b7280',
-        secondaryDark: '#9ca3af'
+        primaryLight: '#181612',
+        primaryDark: '#f7f3ec',
+        secondaryLight: '#766b5a',
+        secondaryDark: '#b2a58f'
+    },
+    border: {
+        subtleLight: 'rgba(75, 59, 37, 0.10)',
+        subtleDark: 'rgba(255, 242, 216, 0.10)',
+        strongLight: 'rgba(194, 148, 62, 0.22)',
+        strongDark: 'rgba(194, 148, 62, 0.28)'
     },
     accent: {
-        subtleLight: '#f7f3ea',
-        subtleDark: '#2a2a2a'
+        subtleLight: '#efe4d0',
+        subtleDark: '#2a241c'
+    },
+    elevation: {
+        card: '0 20px 44px -30px rgba(24, 22, 18, 0.28)',
+        hero: '0 28px 60px -36px rgba(24, 22, 18, 0.34)'
+    },
+    focus: {
+        ring: 'rgba(194, 148, 62, 0.22)'
     },
     mood: {
         positive: '#4ade80',
@@ -82,7 +116,7 @@ export const initTheme = () => {
 
     document.documentElement.classList.remove('light');
 
-    const savedThemeId = localStorage.getItem('themeId') || 'classic';
+    const savedThemeId = localStorage.getItem('themeId') || 'forest';
     const theme = THEMES.find(t => t.id === savedThemeId) || THEMES[0];
     applyThemeColors(theme);
 };
@@ -113,14 +147,27 @@ const applyUiTokens = (tokens: UIThemeTokens) => {
     root.setProperty('--ui-surface-page-dark', tokens.surface.pageDark);
     root.setProperty('--ui-surface-card-light', tokens.surface.cardLight);
     root.setProperty('--ui-surface-card-dark', tokens.surface.cardDark);
+    root.setProperty('--ui-surface-muted-light', tokens.surface.mutedLight);
+    root.setProperty('--ui-surface-muted-dark', tokens.surface.mutedDark);
+    root.setProperty('--ui-surface-hero-light', tokens.surface.heroLight);
+    root.setProperty('--ui-surface-hero-dark', tokens.surface.heroDark);
 
     root.setProperty('--ui-text-primary-light', tokens.text.primaryLight);
     root.setProperty('--ui-text-primary-dark', tokens.text.primaryDark);
     root.setProperty('--ui-text-secondary-light', tokens.text.secondaryLight);
     root.setProperty('--ui-text-secondary-dark', tokens.text.secondaryDark);
 
+    root.setProperty('--ui-border-subtle-light', tokens.border.subtleLight);
+    root.setProperty('--ui-border-subtle-dark', tokens.border.subtleDark);
+    root.setProperty('--ui-border-strong-light', tokens.border.strongLight);
+    root.setProperty('--ui-border-strong-dark', tokens.border.strongDark);
+
     root.setProperty('--ui-accent-subtle-light', tokens.accent.subtleLight);
     root.setProperty('--ui-accent-subtle-dark', tokens.accent.subtleDark);
+
+    root.setProperty('--ui-elevation-card', tokens.elevation.card);
+    root.setProperty('--ui-elevation-hero', tokens.elevation.hero);
+    root.setProperty('--ui-focus-ring', tokens.focus.ring);
 
     root.setProperty('--ui-mood-positive', tokens.mood.positive);
     root.setProperty('--ui-mood-neutral', tokens.mood.neutral);
@@ -139,7 +186,7 @@ export const syncThemeFromSettings = async () => {
         localStorage.setItem('darkMode', effectiveOption);
         applyDarkMode(effectiveOption);
 
-        const themeId = settings.theme_id || 'classic';
+        const themeId = settings.theme_id || 'forest';
         localStorage.setItem('themeId', themeId);
         const theme = THEMES.find(t => t.id === themeId) || THEMES[0];
         applyThemeColors(theme);
@@ -175,7 +222,6 @@ export const applyTheme = async (themeId: string) => {
 };
 
 const applyThemeColors = (theme: typeof THEMES[0]) => {
-    // CSS token 使用的是 rgb(var(--app-primary))，这里必须写入纯数值三元组
     document.documentElement.style.setProperty('--app-primary', theme.primary);
     document.documentElement.style.setProperty('--app-primary-dark', theme.primaryDark);
 };

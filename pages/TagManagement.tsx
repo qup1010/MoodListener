@@ -1,235 +1,262 @@
-﻿/**
- * 标签管理页面
- * 三种情绪类型的标签管理，支持添加和删除
+/**
+ * v1.3 活动管理页（沿用 /settings/tags 路由）
  */
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '../components/Icon';
-import { fetchTags, createTag, deleteTag, TagsByMood, Tag } from '../services';
-import { MoodType } from '../types';
-import { confirmAction, showToast } from '../src/ui/feedback';
+import {
+  archiveActivity,
+  createActivity,
+  createActivityGroup,
+  fetchActivityGroups,
+  moveActivity,
+  reorderActivities,
+  reorderActivityGroups,
+  updateActivity,
+  updateActivityGroup
+} from '../services';
+import { ActivityGroupWithItems, ActivityItem } from '../types';
+import { confirmAction, promptAction, showToast } from '../src/ui/feedback';
 
 export const TagManagement: React.FC = () => {
-    const navigate = useNavigate();
-    const [loading, setLoading] = useState(true);
-    const [tags, setTags] = useState<TagsByMood>({ positive: [], neutral: [], negative: [] });
-    const [showAddModal, setShowAddModal] = useState(false);
-    const [newTagName, setNewTagName] = useState('');
-    const [newTagMood, setNewTagMood] = useState<MoodType>('positive');
-    const [adding, setAdding] = useState(false);
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [groups, setGroups] = useState<ActivityGroupWithItems[]>([]);
 
-    useEffect(() => {
-        loadTags();
-    }, []);
+  useEffect(() => {
+    void loadGroups();
+  }, []);
 
-    const loadTags = async () => {
-        try {
-            const data = await fetchTags();
-            setTags(data);
-        } catch (error) {
-            console.error('加载标签失败:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleAddTag = async () => {
-        if (!newTagName.trim()) {
-            showToast('请输入标签名', 'error');
-            return;
-        }
-
-        setAdding(true);
-        try {
-            const newTag = await createTag({
-                name: newTagName.trim(),
-                mood_type: newTagMood
-            });
-
-            // 更新本地状态
-            setTags(prev => ({
-                ...prev,
-                [newTagMood]: [...prev[newTagMood], newTag]
-            }));
-
-            setNewTagName('');
-            setShowAddModal(false);
-        } catch (error: any) {
-            showToast(error.message || '添加失败', 'error');
-        } finally {
-            setAdding(false);
-        }
-    };
-
-    const handleDeleteTag = async (tag: Tag) => {
-        if (!(await confirmAction({ title: '删除标签', message: `确定删除标签「${tag.name}」吗？`, confirmText: '删除', cancelText: '取消', danger: true }))) return;
-
-        try {
-            await deleteTag(tag.id);
-
-            // 更新本地状态
-            setTags(prev => ({
-                ...prev,
-                [tag.mood_type]: prev[tag.mood_type as keyof TagsByMood].filter(t => t.id !== tag.id)
-            }));
-        } catch (error) {
-            console.error('删除失败:', error);
-            showToast('删除失败，请重试', 'error');
-        }
-    };
-
-    const getMoodInfo = (mood: MoodType) => {
-        switch (mood) {
-            case 'positive':
-                return { label: '积极', icon: 'sentiment_satisfied', color: 'bg-mood-positive', textColor: 'text-mood-positive' };
-            case 'neutral':
-                return { label: '中性', icon: 'sentiment_neutral', color: 'bg-mood-neutral', textColor: 'text-mood-neutral' };
-            case 'negative':
-                return { label: '消极', icon: 'sentiment_dissatisfied', color: 'bg-mood-negative', textColor: 'text-mood-negative' };
-        }
-    };
-
-    const renderTagSection = (mood: MoodType, tagList: Tag[]) => {
-        const info = getMoodInfo(mood);
-
-        return (
-            <section key={mood} className="mb-6">
-                <div className="flex items-center gap-2 mb-3">
-                    <div className={`size-6 rounded-full ${info.color} flex items-center justify-center`}>
-                        <Icon name={info.icon} className="text-white text-sm" />
-                    </div>
-                    <h3 className="font-bold text-gray-900 dark:text-white">{info.label}</h3>
-                    <span className="text-xs text-gray-400">({tagList.length})</span>
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                    {tagList.map(tag => (
-                        <div
-                            key={tag.id}
-                            className="group flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full text-sm"
-                        >
-                            <span className="text-gray-700 dark:text-gray-300">{tag.name}</span>
-                            <button
-                                onClick={() => handleDeleteTag(tag)}
-                                className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-red-500"
-                            >
-                                <Icon name="close" size={14} />
-                            </button>
-                        </div>
-                    ))}
-
-                    {tagList.length === 0 && (
-                        <p className="text-sm text-gray-400 italic">暂无标签</p>
-                    )}
-                </div>
-            </section>
-        );
-    };
-
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center min-h-screen bg-background-light dark:bg-background-dark">
-                <span className="text-gray-500">加载中...</span>
-            </div>
-        );
+  const loadGroups = async () => {
+    setLoading(true);
+    try {
+      const data = await fetchActivityGroups(true);
+      setGroups(data);
+    } catch (error) {
+      console.error('加载活动分组失败:', error);
+      showToast('加载失败，请重试', 'error');
+    } finally {
+      setLoading(false);
     }
+  };
 
+  const handleAddGroup = async () => {
+    const name = await promptAction({
+      title: '新增分组',
+      message: '请输入分组名称',
+      placeholder: '例如：睡眠、工作、生活',
+      confirmText: '新增',
+      cancelText: '取消'
+    });
+
+    if (!name?.trim()) return;
+
+    try {
+      await createActivityGroup({ name: name.trim() });
+      await loadGroups();
+      showToast('分组已新增', 'success');
+    } catch (error) {
+      console.error('新增分组失败:', error);
+      showToast('新增失败，请重试', 'error');
+    }
+  };
+
+  const handleRenameGroup = async (groupId: number, currentName: string) => {
+    const name = await promptAction({
+      title: '重命名分组',
+      message: `当前名称：${currentName}`,
+      placeholder: currentName,
+      confirmText: '保存',
+      cancelText: '取消'
+    });
+
+    if (!name?.trim()) return;
+
+    try {
+      await updateActivityGroup(groupId, { name: name.trim() });
+      await loadGroups();
+    } catch (error) {
+      console.error('分组重命名失败:', error);
+      showToast('操作失败', 'error');
+    }
+  };
+
+  const moveGroup = async (groupId: number, direction: -1 | 1) => {
+    const index = groups.findIndex((item) => item.id === groupId);
+    const nextIndex = index + direction;
+    if (index < 0 || nextIndex < 0 || nextIndex >= groups.length) return;
+
+    const ordered = [...groups];
+    const [moved] = ordered.splice(index, 1);
+    ordered.splice(nextIndex, 0, moved);
+
+    try {
+      await reorderActivityGroups(ordered.map((item) => item.id));
+      await loadGroups();
+    } catch (error) {
+      console.error('分组排序失败:', error);
+      showToast('排序失败', 'error');
+    }
+  };
+
+  const handleAddActivity = async (groupId: number) => {
+    const name = await promptAction({
+      title: '新增活动',
+      message: '请输入活动名称',
+      placeholder: '例如：运动、午睡、开会',
+      confirmText: '新增',
+      cancelText: '取消'
+    });
+
+    if (!name?.trim()) return;
+
+    try {
+      await createActivity({ group_id: groupId, name: name.trim(), icon: 'label' });
+      await loadGroups();
+      showToast('活动已新增', 'success');
+    } catch (error) {
+      console.error('新增活动失败:', error);
+      showToast('新增失败，请重试', 'error');
+    }
+  };
+
+  const handleRenameActivity = async (activity: ActivityItem) => {
+    const name = await promptAction({
+      title: '重命名活动',
+      message: `当前名称：${activity.name}`,
+      placeholder: activity.name,
+      confirmText: '保存',
+      cancelText: '取消'
+    });
+
+    if (!name?.trim()) return;
+
+    try {
+      await updateActivity(activity.id, { name: name.trim() });
+      await loadGroups();
+    } catch (error) {
+      console.error('活动重命名失败:', error);
+      showToast('操作失败', 'error');
+    }
+  };
+
+  const handleArchiveActivity = async (activity: ActivityItem) => {
+    const nextArchived = !activity.is_archived;
+    const confirmed = await confirmAction({
+      title: nextArchived ? '归档活动' : '恢复活动',
+      message: nextArchived ? `归档后记录页不再显示「${activity.name}」` : `恢复后记录页将显示「${activity.name}」`,
+      confirmText: nextArchived ? '归档' : '恢复',
+      cancelText: '取消',
+      danger: nextArchived
+    });
+
+    if (!confirmed) return;
+
+    try {
+      await archiveActivity(activity.id, nextArchived);
+      await loadGroups();
+    } catch (error) {
+      console.error('归档活动失败:', error);
+      showToast('操作失败', 'error');
+    }
+  };
+
+  const moveActivityInGroup = async (group: ActivityGroupWithItems, activityId: number, direction: -1 | 1) => {
+    const list = [...group.activities];
+    const index = list.findIndex((item) => item.id === activityId);
+    const nextIndex = index + direction;
+    if (index < 0 || nextIndex < 0 || nextIndex >= list.length) return;
+
+    const [moved] = list.splice(index, 1);
+    list.splice(nextIndex, 0, moved);
+
+    try {
+      await reorderActivities(group.id, list.map((item) => item.id));
+      await loadGroups();
+    } catch (error) {
+      console.error('活动排序失败:', error);
+      showToast('排序失败', 'error');
+    }
+  };
+
+  const moveActivityToNextGroup = async (activity: ActivityItem) => {
+    const currentGroupIndex = groups.findIndex((group) => group.id === activity.group_id);
+    if (currentGroupIndex === -1 || groups.length < 2) return;
+
+    const nextGroup = groups[(currentGroupIndex + 1) % groups.length];
+
+    try {
+      await moveActivity(activity.id, nextGroup.id);
+      await loadGroups();
+      showToast(`已移动到 ${nextGroup.name}`, 'success');
+    } catch (error) {
+      console.error('移动活动失败:', error);
+      showToast('移动失败', 'error');
+    }
+  };
+
+  if (loading) {
     return (
-        <div className="relative flex min-h-screen w-full flex-col bg-background-light dark:bg-background-dark font-display antialiased">
-            <header className="flex items-center justify-between p-4 sticky top-0 z-50 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-800/50">
-                <button
-                    onClick={() => navigate('/settings', { replace: true })}
-                    className="flex size-10 items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
-                >
-                    <Icon name="arrow_back_ios_new" className="text-gray-900 dark:text-white" />
-                </button>
-                <h1 className="text-lg font-bold text-gray-900 dark:text-white">标签管理</h1>
-                <button
-                    onClick={() => setShowAddModal(true)}
-                    className="flex size-10 items-center justify-center rounded-full bg-primary text-white shadow-md hover:shadow-lg transition-shadow"
-                >
-                    <Icon name="add" />
-                </button>
-            </header>
-
-            <main className="flex-1 px-6 py-6">
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-                    管理不同情绪类型的标签，记录心情时会根据情绪自动显示对应标签。
-                </p>
-
-                {renderTagSection('positive', tags.positive)}
-                {renderTagSection('neutral', tags.neutral)}
-                {renderTagSection('negative', tags.negative)}
-            </main>
-
-            {/* 添加标签弹窗 */}
-            {showAddModal && (
-                <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in">
-                    <div className="w-full max-w-sm bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-2xl animate-in slide-in-from-bottom-10">
-                        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6">添加新标签</h3>
-
-                        <div className="space-y-4">
-                            {/* 情绪类型选择 */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-500 mb-2">所属情绪</label>
-                                <div className="flex gap-2">
-                                    {(['positive', 'neutral', 'negative'] as MoodType[]).map(mood => {
-                                        const info = getMoodInfo(mood);
-                                        return (
-                                            <button
-                                                key={mood}
-                                                onClick={() => setNewTagMood(mood)}
-                                                className={`flex-1 py-2 rounded-lg border-2 transition-all ${newTagMood === mood
-                                                        ? `${info.color} text-white border-transparent`
-                                                        : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'
-                                                    }`}
-                                            >
-                                                {info.label}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-
-                            {/* 标签名输入 */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-500 mb-2">标签名称</label>
-                                <input
-                                    type="text"
-                                    value={newTagName}
-                                    onChange={(e) => setNewTagName(e.target.value)}
-                                    placeholder="如：开心、专注、焦虑..."
-                                    maxLength={20}
-                                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder:text-gray-400 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
-                                />
-                            </div>
-                        </div>
-
-                        <div className="flex gap-3 mt-8">
-                            <button
-                                onClick={() => {
-                                    setShowAddModal(false);
-                                    setNewTagName('');
-                                }}
-                                className="flex-1 py-3 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                            >
-                                取消
-                            </button>
-                            <button
-                                onClick={handleAddTag}
-                                disabled={adding || !newTagName.trim()}
-                                className="flex-1 py-3 rounded-xl bg-primary text-white font-bold shadow-lg shadow-primary/20 hover:brightness-105 disabled:opacity-50 transition-all"
-                            >
-                                {adding ? '添加中...' : '确认添加'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-background-light dark:bg-background-dark text-gray-500">
+        加载中...
+      </div>
     );
+  }
+
+  return (
+    <div className="relative flex min-h-screen w-full flex-col bg-background-light dark:bg-background-dark font-display text-[#121617] dark:text-gray-100 antialiased">
+      <header className="sticky top-0 z-30 flex items-center justify-between px-4 py-3 bg-background-light/90 dark:bg-background-dark/90 backdrop-blur-md border-b border-gray-200/60 dark:border-gray-800/60">
+        <button onClick={() => navigate('/settings', { replace: true })} className="size-10 rounded-full flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10">
+          <Icon name="arrow_back_ios_new" />
+        </button>
+        <h1 className="text-lg font-bold">活动管理</h1>
+        <button onClick={() => void handleAddGroup()} className="size-10 rounded-full bg-primary text-white flex items-center justify-center">
+          <Icon name="add" />
+        </button>
+      </header>
+
+      <main className="px-4 py-4 pb-8 flex flex-col gap-3 overflow-y-auto">
+        {groups.map((group, groupIndex) => (
+          <section key={group.id} className="ui-card p-4">
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <div>
+                <h2 className="font-bold text-base">{group.name}</h2>
+                <p className="text-xs text-gray-500">{group.activities.length} 个活动</p>
+              </div>
+              <div className="flex items-center gap-1">
+                <button onClick={() => void handleRenameGroup(group.id, group.name)} className="size-8 rounded-lg border border-gray-200 dark:border-gray-700"><Icon name="edit" size={16} /></button>
+                <button onClick={() => void moveGroup(group.id, -1)} disabled={groupIndex === 0} className="size-8 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-40"><Icon name="arrow_upward" size={16} /></button>
+                <button onClick={() => void moveGroup(group.id, 1)} disabled={groupIndex === groups.length - 1} className="size-8 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-40"><Icon name="arrow_downward" size={16} /></button>
+                <button onClick={() => void handleAddActivity(group.id)} className="h-8 px-2 rounded-lg bg-primary/10 text-primary text-xs font-semibold">+ 活动</button>
+              </div>
+            </div>
+
+            {group.activities.length === 0 ? (
+              <p className="text-sm text-gray-400">暂无活动</p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {group.activities.map((activity, index) => (
+                  <div key={activity.id} className="flex items-center justify-between gap-2 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2 bg-white dark:bg-gray-800/40">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Icon name={activity.icon || 'label'} size={16} className="text-gray-400" />
+                      <span className={`text-sm font-medium truncate ${activity.is_archived ? 'line-through text-gray-400' : 'text-gray-700 dark:text-gray-200'}`}>{activity.name}</span>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button onClick={() => void handleRenameActivity(activity)} className="size-7 rounded-md border border-gray-200 dark:border-gray-700"><Icon name="edit" size={14} /></button>
+                      <button onClick={() => void moveActivityInGroup(group, activity.id, -1)} disabled={index === 0} className="size-7 rounded-md border border-gray-200 dark:border-gray-700 disabled:opacity-40"><Icon name="arrow_upward" size={14} /></button>
+                      <button onClick={() => void moveActivityInGroup(group, activity.id, 1)} disabled={index === group.activities.length - 1} className="size-7 rounded-md border border-gray-200 dark:border-gray-700 disabled:opacity-40"><Icon name="arrow_downward" size={14} /></button>
+                      <button onClick={() => void moveActivityToNextGroup(activity)} className="size-7 rounded-md border border-gray-200 dark:border-gray-700"><Icon name="redo" size={14} /></button>
+                      <button onClick={() => void handleArchiveActivity(activity)} className={`size-7 rounded-md border ${activity.is_archived ? 'border-emerald-300 text-emerald-600' : 'border-rose-300 text-rose-500'}`}>
+                        <Icon name={activity.is_archived ? 'unarchive' : 'archive'} size={14} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        ))}
+      </main>
+    </div>
+  );
 };
-
-
-
-

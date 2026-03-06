@@ -1,4 +1,4 @@
-﻿import React, { Suspense, lazy, useEffect, useRef } from 'react';
+import React, { Suspense, lazy, useEffect, useRef } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { HashRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Layout } from './components/Layout';
@@ -7,6 +7,7 @@ import { FeedbackProvider, confirmAction, dismissTopOverlay } from './src/ui/fee
 
 const Home = lazy(() => import('./pages/Home').then(m => ({ default: m.Home })));
 const RecordMood = lazy(() => import('./pages/RecordMood').then(m => ({ default: m.RecordMood })));
+const RecordNote = lazy(() => import('./pages/RecordNote').then(m => ({ default: m.RecordNote })));
 const Timeline = lazy(() => import('./pages/Timeline').then(m => ({ default: m.Timeline })));
 const CalendarView = lazy(() => import('./pages/Calendar').then(m => ({ default: m.CalendarView })));
 const Stats = lazy(() => import('./pages/Stats').then(m => ({ default: m.Stats })));
@@ -166,6 +167,7 @@ const App: React.FC = () => {
             <Route path="/stats" element={<Layout><Stats /></Layout>} />
 
             <Route path="/record" element={<RecordMood />} />
+            <Route path="/record/note" element={<RecordNote />} />
             <Route path="/settings" element={<Layout><Settings /></Layout>} />
             <Route path="/settings/notifications" element={<NotificationSettings />} />
             <Route path="/settings/about" element={<AboutInfo />} />
@@ -180,4 +182,7 @@ const App: React.FC = () => {
 };
 
 export default App;
+
+
+
 

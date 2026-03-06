@@ -1,4 +1,4 @@
-﻿export interface PageChromeConfig {
+export interface PageChromeConfig {
   showTab: boolean;
   showFab: boolean;
   fabAction: 'record' | 'none';

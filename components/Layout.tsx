@@ -8,10 +8,10 @@ interface LayoutProps {
 }
 
 const navItems = [
-  { key: 'home', path: '/home', label: ' ◊“≥', icon: 'home' },
-  { key: 'history', path: '/history', label: '¿˙ ∑', icon: 'calendar_month', aliases: ['/calendar'] },
-  { key: 'stats', path: '/stats', label: 'Õ≥º∆', icon: 'bar_chart' },
-  { key: 'settings', path: '/settings', label: '…Ë÷√', icon: 'settings' }
+  { key: 'home', path: '/home', label: 'È¶ñÈ°µ', icon: 'home' },
+  { key: 'history', path: '/history', label: 'ÂéÜÂè≤', icon: 'calendar_month', aliases: ['/calendar'] },
+  { key: 'stats', path: '/stats', label: 'ÁªüËÆ°', icon: 'bar_chart' },
+  { key: 'settings', path: '/settings', label: 'ËÆæÁΩÆ', icon: 'settings' }
 ] as const;
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
@@ -32,9 +32,12 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
       {chromeConfig.showFab && chromeConfig.fabAction === 'record' && (
         <button
-          aria-label="øÏÀŸº«¬º"
-          className="fixed right-5 z-40 size-12 rounded-full bg-primary text-white border border-black/10 dark:border-white/10 shadow-lg shadow-primary/25 hover:scale-105 active:scale-95 transition-transform"
-          style={{ bottom: 'calc(env(safe-area-inset-bottom) + 84px)' }}
+          aria-label="Âø´ÈÄüËÆ∞ÂΩï"
+          className="fixed right-5 z-40 size-12 rounded-full text-white border border-black/10 dark:border-white/10 shadow-[0_18px_28px_-18px_rgba(194,148,62,0.85)] hover:scale-105 active:scale-95 transition-transform"
+          style={{
+            bottom: 'calc(env(safe-area-inset-bottom) + 84px)',
+            background: 'linear-gradient(135deg, rgb(var(--app-primary)), color-mix(in srgb, rgb(var(--app-primary)) 70%, #8f6522 30%))'
+          }}
           onClick={() => navigate('/record')}
         >
           <Icon name="add" className="text-2xl" />
@@ -42,7 +45,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       )}
 
       {chromeConfig.showTab && (
-        <nav className="fixed bottom-0 z-30 w-full bg-white/95 dark:bg-card-dark/95 backdrop-blur-md border-t border-gray-200 dark:border-gray-800 pb-safe pt-2 px-4 shadow-[0_-4px_20px_rgba(0,0,0,0.02)]">
+        <nav className="fixed bottom-0 z-30 w-full backdrop-blur-md border-t border-[var(--ui-border-subtle-light)] dark:border-[var(--ui-border-subtle-dark)] pb-safe pt-2 px-4 bg-[color:var(--ui-surface-card-light)]/95 dark:bg-[color:var(--ui-surface-card-dark)]/94 shadow-[0_-8px_32px_rgba(24,22,18,0.06)]">
           <div className="grid grid-cols-4 items-center h-16 max-w-md mx-auto">
             {navItems.map((item) => {
               const active = isNavActive(item.path, item.aliases);
@@ -57,9 +60,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                   <Icon
                     name={item.icon}
                     fill={active}
-                    className={`transition-colors ${active ? 'text-primary' : 'text-gray-400 dark:text-gray-500 group-hover:text-primary'}`}
+                    className={`transition-colors ${active ? 'text-primary' : 'text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)] group-hover:text-primary'}`}
                   />
-                  <span className={`text-[10px] font-medium transition-colors ${active ? 'text-primary font-bold' : 'text-gray-400 dark:text-gray-500 group-hover:text-primary'}`}>
+                  <span className={`text-[10px] font-semibold transition-colors ${active ? 'text-primary' : 'text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)] group-hover:text-primary'}`}>
                     {item.label}
                   </span>
                 </button>
@@ -71,4 +74,3 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     </div>
   );
 };
-

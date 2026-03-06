@@ -9,17 +9,17 @@ export interface UploadResult {
 export async function saveImage(file: File): Promise<UploadResult> {
     const filename = `${Date.now()}_${file.name}`;
 
-    // 将 File 转换为 Base64
+    // 灏?File 杞崲涓?Base64
     const base64Data = await readFileAsBase64(file);
 
-    // 写入文件
+    // 鍐欏叆鏂囦欢
     await Filesystem.writeFile({
         path: filename,
         data: base64Data,
         directory: Directory.Data,
     });
 
-    // 获取访问 URL
+    // 鑾峰彇璁块棶 URL
     const uri = await Filesystem.getUri({
         path: filename,
         directory: Directory.Data,
@@ -44,15 +44,15 @@ export async function deleteImage(filename: string): Promise<void> {
     }
 }
 
-// 辅助函数：File -> Base64
+// 杈呭姪鍑芥暟锛欶ile -> Base64
 function readFileAsBase64(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => {
-            // result 包含 "data:image/jpeg;base64,..."，我们需要去掉前缀吗？
-            // Capacitor writeFile 如果没指定 encoding 似乎默认 utf8，但对于 binary 需要 base64?
-            // 查看文档，如果 data 是 string，encoding 未指定，默认 utf8。
-            // 实际上对于图片，最好只传 base64 部分，不带 data URI scheme。
+            // result 鍖呭惈 "data:image/jpeg;base64,..."锛屾垜浠渶瑕佸幓鎺夊墠缂€鍚楋紵
+            // Capacitor writeFile 濡傛灉娌℃寚瀹?encoding 浼间箮榛樿 utf8锛屼絾瀵逛簬 binary 闇€瑕?base64?
+            // 鏌ョ湅鏂囨。锛屽鏋?data 鏄?string锛宔ncoding 鏈寚瀹氾紝榛樿 utf8銆?
+            // 瀹為檯涓婂浜庡浘鐗囷紝鏈€濂藉彧浼?base64 閮ㄥ垎锛屼笉甯?data URI scheme銆?
 
             const result = reader.result as string;
             const base64 = result.split(',')[1];

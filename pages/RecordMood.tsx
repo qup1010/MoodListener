@@ -1,605 +1,432 @@
-﻿/**
- * 记录心情页面
- * 用户选择情绪、添加标签、输入内容、上传图片后保存
+/**
+ * v1.3 记录页（Daylio 风格）
+ * 5级情绪 + 活动多选 + 快速笔记
  */
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '../components/Icon';
-import { createEntry, fetchTagsByMood, uploadImage, fetchSettings, Tag } from '../services';
-import { MoodType } from '../types';
+import {
+  clearRecordDraftV2,
+  createEntryV2,
+  fetchActivityGroups,
+  fetchRecentActivities,
+  getRecordDraftV2,
+  saveRecordDraftV2,
+  uploadImage
+} from '../services';
+import { ActivityGroupWithItems, MoodScore, RecentActivityItem, RecordDraftV2 } from '../types';
+import { MOOD_LEVELS, MOOD_SCORE_DEFAULT } from '../src/constants/moodV2';
+import { recordCopy } from '../src/constants/copywriting';
 import { toLocalDateString } from '../src/utils/date';
-import { ENTRY_PROMPTS } from '../src/constants/copywriting';
-import { confirmAction, promptAction, showToast } from '../src/ui/feedback';
+import { confirmAction, showToast } from '../src/ui/feedback';
+
+const isDraftEmpty = (draft: RecordDraftV2): boolean => {
+  return (
+    draft.mood_score === MOOD_SCORE_DEFAULT &&
+    draft.activity_ids.length === 0 &&
+    draft.quick_note.trim().length === 0 &&
+    draft.full_note.trim().length === 0 &&
+    draft.location.trim().length === 0 &&
+    draft.images.length === 0
+  );
+};
 
 export const RecordMood: React.FC = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [selectedMood, setSelectedMood] = useState<MoodType>('positive');
-  const [selectedTags, setSelectedTags] = useState<string[]>([]); // 默认不选择任何标签
-  const [content, setContent] = useState('');
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [availableTags, setAvailableTags] = useState<Tag[]>([]);
-  const [images, setImages] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
-  const [fetchingLocation, setFetchingLocation] = useState(false);
+  const [showExtras, setShowExtras] = useState(false);
+  const [groups, setGroups] = useState<ActivityGroupWithItems[]>([]);
+  const [expandedGroupIds, setExpandedGroupIds] = useState<number[]>([]);
+  const [recentActivities, setRecentActivities] = useState<RecentActivityItem[]>([]);
 
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [promptIndex, setPromptIndex] = useState(() => Math.floor(Math.random() * ENTRY_PROMPTS.length));
-  const [details, setDetails] = useState({
-    location: '',
-    time: '下午时段'
-  });
-  const hasPendingChanges = useMemo(() => {
-    return selectedTags.length > 0 || content.trim().length > 0 || images.length > 0 || details.location.trim().length > 0;
-  }, [selectedTags, content, images, details.location]);
+  const [moodScore, setMoodScore] = useState<MoodScore>(MOOD_SCORE_DEFAULT);
+  const [activityIds, setActivityIds] = useState<number[]>([]);
+  const [quickNote, setQuickNote] = useState('');
+  const [fullNote, setFullNote] = useState('');
+  const [location, setLocation] = useState('');
+  const [images, setImages] = useState<string[]>([]);
+
+  useEffect(() => {
+    void initPage();
+  }, []);
+
+  useEffect(() => {
+    if (loading) return;
+
+    void saveRecordDraftV2({
+      mood_score: moodScore,
+      activity_ids: activityIds,
+      quick_note: quickNote,
+      full_note: fullNote,
+      location,
+      images
+    });
+  }, [moodScore, activityIds, quickNote, fullNote, location, images, loading]);
+
+  const initPage = async () => {
+    setLoading(true);
+    try {
+      const [draft, nextGroups, recent] = await Promise.all([
+        getRecordDraftV2(),
+        fetchActivityGroups(false),
+        fetchRecentActivities(6)
+      ]);
+
+      setMoodScore(draft.mood_score || MOOD_SCORE_DEFAULT);
+      setActivityIds(draft.activity_ids || []);
+      setQuickNote(draft.quick_note || '');
+      setFullNote(draft.full_note || '');
+      setLocation(draft.location || '');
+      setImages(draft.images || []);
+      setGroups(nextGroups);
+      setRecentActivities(recent);
+      setExpandedGroupIds(nextGroups.slice(0, 2).map((group) => group.id));
+    } catch (error) {
+      console.error('初始化记录页失败:', error);
+      showToast('初始化失败，请重试', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const selectedCount = activityIds.length;
+
+  const currentDraft: RecordDraftV2 = useMemo(() => ({
+    mood_score: moodScore,
+    activity_ids: activityIds,
+    quick_note: quickNote,
+    full_note: fullNote,
+    location,
+    images
+  }), [moodScore, activityIds, quickNote, fullNote, location, images]);
+
+  const extrasSummary = useMemo(() => {
+    const parts: string[] = [];
+    if (location.trim()) parts.push(recordCopy.extrasLocationDone);
+    if (images.length > 0) parts.push(recordCopy.extrasImageCount(images.length));
+    return parts.join(' · ') || recordCopy.extrasClosedHint;
+  }, [location, images]);
 
   const handleBack = async () => {
-    if (!hasPendingChanges || saving) {
+    if (isDraftEmpty(currentDraft) || saving) {
       navigate('/home', { replace: true });
       return;
     }
 
     const shouldLeave = await confirmAction({
-      title: '放弃当前记录？',
-      message: '未保存的内容将丢失，是否离开？',
-      confirmText: '离开',
-      cancelText: '继续编辑',
+      title: recordCopy.backConfirmTitle,
+      message: recordCopy.backConfirmMessage,
+      confirmText: recordCopy.backConfirmLeave,
+      cancelText: recordCopy.backConfirmStay,
       danger: true
     });
 
     if (shouldLeave) {
+      await clearRecordDraftV2();
       navigate('/home', { replace: true });
     }
   };
 
-  // 根据情绪类型加载对应标签
-  useEffect(() => {
-    loadTags(selectedMood);
-  }, [selectedMood]);
-
-  const loadTags = async (mood: MoodType) => {
-    try {
-      const tags = await fetchTagsByMood(mood);
-      setAvailableTags(tags);
-      // 切换情绪时清空已选标签
-      setSelectedTags([]);
-    } catch (error) {
-      console.error('加载标签失败:', error);
-    }
+  const handleToggleActivity = (activityId: number) => {
+    setActivityIds((prev) => {
+      if (prev.includes(activityId)) {
+        return prev.filter((id) => id !== activityId);
+      }
+      return [...prev, activityId];
+    });
   };
 
-  const toggleTag = (tag: string) => {
-    if (selectedTags.includes(tag)) {
-      setSelectedTags(selectedTags.filter(t => t !== tag));
-    } else {
-      setSelectedTags([...selectedTags, tag]);
-    }
+  const toggleGroup = (groupId: number) => {
+    setExpandedGroupIds((prev) => prev.includes(groupId)
+      ? prev.filter((id) => id !== groupId)
+      : [...prev, groupId]);
   };
 
-  /**
-   * 处理图片上传
-   */
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
+  const handleUploadImages = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
     if (!files || files.length === 0) return;
 
     setUploading(true);
     try {
+      const nextImages = [...images];
       for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const result = await uploadImage(file);
-        setImages(prev => [...prev, result.url]);
+        const result = await uploadImage(files[i]);
+        nextImages.push(result.url);
       }
+      setImages(nextImages);
     } catch (error: any) {
-      showToast(error.message || '图片上传失败', 'error');
+      showToast(error?.message || '图片上传失败', 'error');
     } finally {
       setUploading(false);
-      // 清空 input 以便再次选择同一文件
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
     }
   };
 
-  const removeImage = (index: number) => {
-    setImages(images.filter((_, i) => i !== index));
-  };
-
-  /**
-   * 获取当前位置（优化权限申请流程）
-   */
-  const getCurrentLocation = async () => {
-    if (fetchingLocation) return;
-
-    setFetchingLocation(true);
-    console.log('[Location] Starting location fetch...');
-
-    try {
-      // 动态导入 Geolocation 插件
-      const { Geolocation } = await import('@capacitor/geolocation');
-
-      console.log('[Location] Geolocation plugin loaded');
-
-      // 先检查权限状态
-      const permissionStatus = await Geolocation.checkPermissions();
-      console.log('[Location] Permission status:', permissionStatus.location);
-
-      // 如果被拒绝，引导用户到设置
-      if (permissionStatus.location === 'denied') {
-        console.log('[Location] Permission denied');
-        if (await confirmAction({
-          title: '位置权限已被拒绝',
-          message: '要开启位置获取功能，请前往：设置 → 应用 → MoodListener → 权限 → 位置。是否现在去设置？',
-          confirmText: '去设置',
-          cancelText: '稍后'
-        })) {
-          showToast('请手动在系统设置中开启位置权限', 'info', 3000);
-        }
-        setFetchingLocation(false);
-        return;
-      }
-
-      // 如果未请求过，请求权限
-      if (permissionStatus.location === 'prompt' || permissionStatus.location === 'prompt-with-rationale') {
-        console.log('[Location] Requesting permission...');
-        const requestResult = await Geolocation.requestPermissions();
-        console.log('[Location] Permission request result:', requestResult.location);
-
-        if (requestResult.location !== 'granted') {
-          showToast('位置权限被拒绝，无法获取位置', 'error');
-          setFetchingLocation(false);
-          return;
-        }
-      }
-
-      console.log('[Location] Getting current position...');
-
-      // 获取位置
-      const position = await Geolocation.getCurrentPosition({
-        enableHighAccuracy: true,
-        timeout: 15000,
-        maximumAge: 0
-      });
-
-      // 获取设置中的 Key
-      // 使用统一的 API 获取设置，确保兼容 Native 和 Web
-      const settings = await fetchSettings();
-      const amapKey = settings.amap_key;
-
-      console.log('[Location] Position obtained:', position.coords);
-      const { latitude, longitude } = position.coords;
-      const coords = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
-
-      // 先设置坐标，即使地理编码失败也有基本信息
-      setDetails(prev => ({ ...prev, location: coords }));
-
-      console.log('[Location] Fetching address...');
-
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000);
-        let locationName = '';
-
-        if (amapKey) {
-          // 使用高德逆地理编码
-          console.log('[Location] Using Amap API');
-          const apiUrl = `https://restapi.amap.com/v3/geocode/regeo?key=${amapKey}&location=${longitude},${latitude}&radius=1000&extensions=base`;
-
-          const response = await fetch(apiUrl, { signal: controller.signal });
-          clearTimeout(timeoutId);
-          const data = await response.json();
-
-          if (data.status === '1' && data.regeocode) {
-            locationName = data.regeocode.formatted_address;
-            // 简化地址：只保留区/县及之后的部分，或者街道信息
-            const addressComponent = data.regeocode.addressComponent;
-            if (addressComponent) {
-              const district = addressComponent.district || '';
-              const township = addressComponent.township || '';
-              const streetNumber = addressComponent.streetNumber?.street || '';
-              const building = addressComponent.building?.name || '';
-
-              if (building) locationName = `${district} ${building}`;
-              else if (streetNumber) locationName = `${district} ${streetNumber}`;
-              else locationName = `${district} ${township}`;
-            }
-          } else {
-            throw new Error('Amap API failed: ' + data.info);
-          }
-        } else {
-          // 隐私优先：未配置自有 Key 时，不上传经纬度到第三方服务
-          clearTimeout(timeoutId);
-          locationName = coords;
-        }
-        console.log('[Location] Final location name:', locationName);
-        setDetails(prev => ({ ...prev, location: locationName }));
-
-      } catch (geoError: any) {
-        // 地理编码失败不影响功能，坐标已经设置了
-        console.log('[Location] Geocoding failed:', geoError.message);
-
-        // 提供手动输入选项
-        const isTimeout = geoError.name === 'AbortError' || geoError.message?.includes('timeout');
-        if (await confirmAction({
-          title: '地址解析失败',
-          message: `已获取GPS坐标：${coords}。地址解析${isTimeout ? '超时' : '失败'}，是否手动输入位置？`,
-          confirmText: '手动输入',
-          cancelText: '取消'
-        })) {
-          const customLocation = await promptAction({
-            title: '手动输入位置',
-            message: '请输入位置名称',
-            placeholder: '例如：浦东新区 世纪大道',
-            confirmText: '保存',
-            cancelText: '取消'
-          });
-          if (customLocation && customLocation.trim()) {
-            setDetails(prev => ({ ...prev, location: customLocation.trim() }));
-            // alert('✅ 位置已设置'); // Removed annoying alert
-          }
-        }
-      }
-    } catch (error: any) {
-      console.error('[Location] Error:', error);
-
-      let errorMessage = '获取位置失败';
-
-      if (error.message?.includes('location unavailable')) {
-        errorMessage = '⚠️ 位置服务不可用\n请确保：\n1. GPS已开启\n2. 位置服务已启用\n3. 在室外或窗边';
-      } else if (error.message?.includes('timeout')) {
-        errorMessage = '⚠️ 获取位置超时\n请尝试：\n1. 到室外开阔处\n2. 重启位置服务';
-      } else if (error.message?.includes('denied') || error.message?.includes('User denied')) {
-        errorMessage = '⚠️ 位置权限被拒绝';
-      } else {
-        errorMessage = `⚠️ 获取位置失败:\n${error.message || '未知错误'}`;
-      }
-
-      // 即使GPS失败，也提供手动输入选项
-      if (await confirmAction({
-        title: '获取位置失败',
-        message: `${errorMessage}。是否手动输入位置？`,
-        confirmText: '手动输入',
-        cancelText: '取消'
-      })) {
-        const customLocation = await promptAction({
-          title: '手动输入位置',
-          message: '请输入位置名称',
-          placeholder: '例如：浦东新区 世纪大道',
-          confirmText: '保存',
-          cancelText: '取消'
-        });
-        if (customLocation && customLocation.trim()) {
-          setDetails(prev => ({ ...prev, location: customLocation.trim() }));
-          // alert('✅ 位置已设置'); // Removed annoying alert
-        }
-      }
-    } finally {
-      setFetchingLocation(false);
-      console.log('[Location] Fetch complete');
-    }
-  };
-
-  /**
-   * 保存心情记录
-   */
   const handleSave = async () => {
     if (saving) return;
 
     setSaving(true);
     try {
       const now = new Date();
-      const date = toLocalDateString(now); // YYYY-MM-DD (local)
-      const time = now.toTimeString().slice(0, 5);  // HH:mm
-
-      // 根据选择的标签生成标题
-      const title = selectedTags.length > 0
-        ? selectedTags.slice(0, 2).join(' · ')
-        : getMoodTitle(selectedMood);
-
-      await createEntry({
-        date,
-        time,
-        mood: selectedMood,
-        title,
-        content: content || undefined,
-        tags: selectedTags,
-        location: details.location || undefined,
-        images: images.length > 0 ? images : undefined
+      await createEntryV2({
+        date: toLocalDateString(now),
+        time: now.toTimeString().slice(0, 5),
+        mood_score: moodScore,
+        quick_note: quickNote.trim(),
+        full_note: fullNote.trim(),
+        location: location.trim(),
+        images,
+        activity_ids: activityIds
       });
 
-      // 保存成功，跳转到历史页面
-      navigate('/history');
+      await clearRecordDraftV2();
+      showToast(recordCopy.saveSuccess, 'success');
+      navigate('/history', { replace: true });
     } catch (error) {
-      console.error('保存失败:', error);
+      console.error('保存记录失败:', error);
       showToast('保存失败，请重试', 'error');
     } finally {
       setSaving(false);
     }
   };
 
-  /**
-   * 根据情绪类型生成默认标题
-   */
-  const getMoodTitle = (mood: MoodType): string => {
-    switch (mood) {
-      case 'positive': return '今天心情不错';
-      case 'neutral': return '平静的一天';
-      case 'negative': return '有些低落';
-    }
-  };
+  if (loading) {
+    return (
+      <div className="page-shell min-h-screen flex items-center justify-center text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">
+        加载中...
+      </div>
+    );
+  }
 
   return (
-    <div className="relative flex h-auto min-h-screen w-full flex-col overflow-x-hidden pb-8 bg-background-light dark:bg-background-dark font-display text-[#121617] dark:text-gray-100 antialiased selection:bg-primary/10">
-      <header className="flex items-center justify-between p-4 sticky top-0 z-50 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md transition-colors duration-300">
-        <button
-          onClick={() => void handleBack()}
-          className="flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors group"
-        >
-          <Icon name="arrow_back_ios_new" size={24} className="text-[#121617] dark:text-white group-hover:-translate-x-0.5 transition-transform" />
-        </button>
-        <h2 className="text-[#121617] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">记录心情</h2>
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="h-9 px-3 shrink-0 rounded-lg bg-primary text-white text-sm font-bold disabled:opacity-50"
-        >
-          {saving ? '保存中' : '保存'}
-        </button>
+    <div className="page-shell relative flex min-h-screen w-full flex-col animate-in fade-in slide-in-from-bottom-2">
+      <header className="page-header px-4 py-3">
+        <div className="flex items-center justify-between gap-3">
+          <button
+            onClick={() => void handleBack()}
+            className="size-10 rounded-full flex items-center justify-center bg-white/55 dark:bg-white/5 border border-[var(--ui-border-subtle-light)] dark:border-[var(--ui-border-subtle-dark)]"
+          >
+            <Icon name="arrow_back_ios_new" />
+          </button>
+          <div className="text-center">
+            <h1 className="text-lg font-extrabold tracking-tight">{recordCopy.title}</h1>
+            <p className="text-xs text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)] mt-1">{recordCopy.subtitle}</p>
+          </div>
+          <button
+            onClick={() => void handleSave()}
+            disabled={saving}
+            className="ui-action-primary !w-auto min-w-[88px] px-4"
+          >
+            {saving ? recordCopy.saving : recordCopy.save}
+          </button>
+        </div>
       </header>
 
-      <main className="px-4 pt-2 flex flex-col gap-8">
-        {/* 情绪选择 */}
-        <section>
-          <h2 className="text-[#121617] dark:text-white tracking-tight text-[28px] font-extrabold leading-tight text-center mb-6">你现在感觉如何？</h2>
-          <div className="grid grid-cols-3 gap-3">
-            <div
-              className="relative group cursor-pointer"
-              onClick={() => setSelectedMood('positive')}
-            >
-              <input checked={selectedMood === 'positive'} className="peer sr-only" id="cat_positive" name="mood_category" type="radio" readOnly />
-              <label className={`flex flex-col items-center gap-3 p-4 rounded-2xl border-2 border-transparent shadow-sm hover:shadow-md transition-all duration-300 h-32 justify-center ${selectedMood === 'positive' ? 'bg-mood-positive/10 border-mood-positive/40' : 'bg-white dark:bg-gray-800/50 border-gray-200 dark:border-gray-700'}`} htmlFor="cat_positive">
-                <div className={`size-10 rounded-full flex items-center justify-center transition-colors ${selectedMood === 'positive' ? 'bg-mood-positive/20 text-[#166534] dark:text-mood-positive' : 'bg-mood-positive/10 dark:bg-mood-positive/20 text-[#166534] dark:text-mood-positive'}`}>
-                  <Icon name="sentiment_satisfied" className="text-3xl" fill />
-                </div>
-                <span className={`text-sm font-bold ${selectedMood === 'positive' ? 'text-[#166534] dark:text-mood-positive' : 'text-gray-600 dark:text-gray-400'}`}>积极</span>
-              </label>
-            </div>
-            <div
-              className="relative group cursor-pointer"
-              onClick={() => setSelectedMood('neutral')}
-            >
-              <input checked={selectedMood === 'neutral'} className="peer sr-only" id="cat_neutral" name="mood_category" type="radio" readOnly />
-              <label className={`flex flex-col items-center gap-3 p-4 rounded-2xl border-2 border-transparent shadow-sm hover:shadow-md transition-all duration-300 h-32 justify-center ${selectedMood === 'neutral' ? 'bg-mood-neutral/15 border-mood-neutral/45' : 'bg-white dark:bg-gray-800/50 border-gray-200 dark:border-gray-700'}`} htmlFor="cat_neutral">
-                <div className={`size-10 rounded-full flex items-center justify-center transition-colors ${selectedMood === 'neutral' ? 'bg-mood-neutral/25 text-[#422006]' : 'bg-mood-neutral/10 dark:bg-mood-neutral/20 text-[#854d0e] dark:text-mood-neutral'}`}>
-                  <Icon name="sentiment_neutral" className="text-3xl" fill />
-                </div>
-                <span className={`text-sm font-bold ${selectedMood === 'neutral' ? 'text-[#422006] dark:text-mood-neutral' : 'text-gray-600 dark:text-gray-400'}`}>中性</span>
-              </label>
-            </div>
-            <div
-              className="relative group cursor-pointer"
-              onClick={() => setSelectedMood('negative')}
-            >
-              <input checked={selectedMood === 'negative'} className="peer sr-only" id="cat_negative" name="mood_category" type="radio" readOnly />
-              <label className={`flex flex-col items-center gap-3 p-4 rounded-2xl border-2 border-transparent shadow-sm hover:shadow-md transition-all duration-300 h-32 justify-center ${selectedMood === 'negative' ? 'bg-mood-negative/12 border-mood-negative/45' : 'bg-white dark:bg-gray-800/50 border-gray-200 dark:border-gray-700'}`} htmlFor="cat_negative">
-                <div className={`size-10 rounded-full flex items-center justify-center transition-colors ${selectedMood === 'negative' ? 'bg-mood-negative/20 text-[#991b1b] dark:text-mood-negative' : 'bg-mood-negative/10 dark:bg-mood-negative/20 text-[#991b1b] dark:text-mood-negative'}`}>
-                  <Icon name="sentiment_dissatisfied" className="text-3xl" fill />
-                </div>
-                <span className={`text-sm font-bold ${selectedMood === 'negative' ? 'text-[#991b1b] dark:text-mood-negative' : 'text-gray-600 dark:text-gray-400'}`}>消极</span>
-              </label>
-            </div>
-          </div>
-        </section>
-
-        {/* 标签选择 */}
-        <section>
+      <main className="page-content pb-8 overflow-y-auto">
+        <section className="ui-card ui-card--hero p-4 animate-in fade-in slide-in-from-bottom-2">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-[#121617] dark:text-white text-lg font-bold leading-tight">选择情绪标签</h3>
-            <button
-              onClick={() => navigate('/settings/tags')}
-              className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold border border-primary/30 text-primary bg-primary/5 hover:bg-primary/10 transition-colors"
-            >
-              管理标签
-            </button>
+            <div>
+              <p className="ui-card-title mb-1">情绪梯度</p>
+              <h2 className="text-lg font-extrabold">{recordCopy.moodPrompt}</h2>
+            </div>
+            <div className="ui-icon-chip size-10">
+              <Icon name="neurology" size={20} />
+            </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {availableTags.length > 0 ? (
-              availableTags.map(tag => {
-                const isActive = selectedTags.includes(tag.name);
-                return (
-                  <button
-                    key={tag.id}
-                    onClick={() => toggleTag(tag.name)}
-                    className={`group relative flex items-center gap-2 px-5 py-2.5 rounded-full shadow-sm transition-all active:scale-95 ${isActive
-                      ? 'bg-primary dark:bg-gray-200 dark:text-primary text-white hover:brightness-105'
-                      : 'bg-white dark:bg-gray-800/50 border border-transparent dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:scale-105'
-                      }`}
-                  >
-                    <span className={`text-sm ${isActive ? 'font-bold' : 'font-medium'}`}>{tag.name}</span>
-                    {isActive && <Icon name="check" className="text-base" />}
-                  </button>
-                );
-              })
-            ) : (
-              <p className="text-sm text-gray-400 italic">加载标签中...</p>
-            )}
+          <div className="grid grid-cols-5 gap-2">
+            {MOOD_LEVELS.map((item) => {
+              const active = moodScore === item.score;
+              return (
+                <button
+                  key={item.score}
+                  onClick={() => setMoodScore(item.score)}
+                  className="rounded-[20px] border px-2 py-3.5 flex flex-col items-center gap-1.5 transition-all"
+                  style={{
+                    borderColor: active ? item.color : 'var(--ui-border-subtle-light)',
+                    background: active ? item.softColor : 'rgba(255,255,255,0.55)',
+                    transform: active ? 'translateY(-2px) scale(1.02)' : 'none',
+                    boxShadow: active ? `0 12px 24px -18px ${item.color}` : 'none'
+                  }}
+                >
+                  <Icon name={item.icon} className="text-[24px]" style={{ color: active ? item.color : 'var(--ui-text-secondary-light)' }} />
+                  <span className="text-[10px] font-black tracking-[0.16em]" style={{ color: active ? item.color : 'var(--ui-text-secondary-light)' }}>{item.shortLabel}</span>
+                  <span className="text-[11px] font-semibold" style={{ color: active ? item.color : 'var(--ui-text-primary-light)' }}>{item.label}</span>
+                </button>
+              );
+            })}
           </div>
         </section>
 
-        {/* 内容输入 */}
-        <section>
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <h3 className="text-[#121617] dark:text-white text-lg font-bold leading-tight">此刻的想法...</h3>
-            <button
-              type="button"
-              onClick={() => setPromptIndex((prev) => (prev + 1) % ENTRY_PROMPTS.length)}
-              className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold bg-primary/10 text-primary hover:bg-primary/15 transition-colors"
-            >
-              <Icon name="tips_and_updates" size={14} />
-              换个提示
+        <section className="ui-card p-4 animate-in fade-in slide-in-from-bottom-2">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <p className="ui-card-title mb-1">{recordCopy.activityTitle}</p>
+              <h2 className="text-base font-extrabold">已选 {selectedCount} 项</h2>
+            </div>
+            <button className="ui-action-secondary min-h-9 px-3" onClick={() => navigate('/settings/tags')}>
+              <Icon name="tune" size={16} />
+              管理活动
             </button>
           </div>
-          <div className="relative rounded-2xl bg-white dark:bg-gray-800/50 p-1 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
-            <div className="relative rounded-xl border-2 border-transparent focus-within:border-primary/20 dark:focus-within:border-white/20 transition-colors">
-              <textarea
-                className="w-full bg-transparent border-0 rounded-xl p-4 text-base text-[#121617] dark:text-gray-100 placeholder:text-gray-400 focus:ring-0 min-h-[140px] resize-none leading-relaxed outline-none"
-                placeholder={ENTRY_PROMPTS[promptIndex]}
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-              ></textarea>
-              <div className="flex justify-between items-center px-4 pb-3 pt-1">
-                <div className="flex gap-2">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    className="hidden"
-                    onChange={handleImageUpload}
-                  />
-                  <button
-                    aria-label="Add photo"
-                    className="p-2 text-gray-400 hover:text-primary dark:hover:text-white hover:bg-primary/5 dark:hover:bg-white/5 rounded-lg transition-colors"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={uploading}
-                  >
-                    <Icon name="image" size={20} />
-                  </button>
-                  <button
-                    aria-label="Add location"
-                    className={`p-2 hover:bg-primary/5 dark:hover:bg-white/5 rounded-lg transition-colors ${details.location ? 'text-primary' : 'text-gray-400 hover:text-primary dark:hover:text-white'}`}
-                    onClick={getCurrentLocation}
-                    disabled={fetchingLocation}
-                  >
-                    <Icon name="location_on" size={20} />
-                  </button>
-                </div>
-                <span className="text-xs font-medium text-gray-400">
-                  {uploading ? '上传中...' : fetchingLocation ? '定位中...' : details.location || '刚刚'}
-                </span>
+
+          {recentActivities.length > 0 && (
+            <div className="mb-4">
+              <div className="text-xs font-bold text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)] mb-2">{recordCopy.recentActivityTitle}</div>
+              <div className="flex flex-wrap gap-2">
+                {recentActivities.map((activity) => {
+                  const selected = activityIds.includes(activity.id);
+                  return (
+                    <button
+                      key={activity.id}
+                      onClick={() => handleToggleActivity(activity.id)}
+                      className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-semibold border ${selected ? 'bg-primary text-white border-primary shadow-sm' : 'bg-[var(--ui-surface-muted-light)] dark:bg-[var(--ui-surface-muted-dark)] border-[var(--ui-border-subtle-light)] dark:border-[var(--ui-border-subtle-dark)] text-[var(--ui-text-primary-light)] dark:text-[var(--ui-text-primary-dark)]'}`}
+                    >
+                      <Icon name={activity.icon || 'label'} size={14} />
+                      <span>{activity.name}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
+          )}
+
+          <div className="flex flex-col gap-3">
+            {groups.map((group) => {
+              const expanded = expandedGroupIds.includes(group.id);
+              return (
+                <div key={group.id} className="rounded-[20px] border border-[var(--ui-border-subtle-light)] dark:border-[var(--ui-border-subtle-dark)] bg-[var(--ui-surface-muted-light)] dark:bg-[var(--ui-surface-muted-dark)] overflow-hidden">
+                  <button
+                    onClick={() => toggleGroup(group.id)}
+                    className="w-full flex items-center justify-between px-4 py-3 text-left"
+                  >
+                    <div>
+                      <div className="text-sm font-bold">{group.name}</div>
+                      <div className="text-[11px] text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">{group.activities.length} 个活动</div>
+                    </div>
+                    <Icon name={expanded ? 'expand_less' : 'expand_more'} />
+                  </button>
+
+                  {expanded && (
+                    <div className="px-4 pb-4 flex flex-wrap gap-2 animate-in fade-in slide-in-from-top-2">
+                      {group.activities.map((activity) => {
+                        const selected = activityIds.includes(activity.id);
+                        return (
+                          <button
+                            key={activity.id}
+                            onClick={() => handleToggleActivity(activity.id)}
+                            className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-semibold border ${selected ? 'bg-primary text-white border-primary shadow-sm' : 'bg-white/75 dark:bg-white/5 border-[var(--ui-border-subtle-light)] dark:border-[var(--ui-border-subtle-dark)] text-[var(--ui-text-primary-light)] dark:text-[var(--ui-text-primary-dark)]'}`}
+                          >
+                            <Icon name={activity.icon || 'label'} size={14} />
+                            <span>{activity.name}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </section>
 
-        {/* 已上传图片预览 */}
-        {images.length > 0 && (
-          <section>
-            <h3 className="text-[#121617] dark:text-white text-lg font-bold leading-tight mb-4">已添加图片</h3>
-            <div className="grid grid-cols-3 gap-2">
-              {images.map((img, index) => (
-                <div key={index} className="relative aspect-square rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 group">
-                  <img src={img} alt={`图片 ${index + 1}`} className="w-full h-full object-cover" />
-                  <button
-                    onClick={() => removeImage(index)}
-                    className="absolute top-1 right-1 size-6 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <Icon name="close" size={14} />
-                  </button>
-                </div>
-              ))}
+        <section className="ui-card ui-card--subtle p-4 animate-in fade-in slide-in-from-bottom-2">
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <div>
+              <p className="ui-card-title mb-1">{recordCopy.quickNoteTitle}</p>
+              <h2 className="text-base font-extrabold">先留一句最想记住的话</h2>
             </div>
-          </section>
-        )}
-
-        {/* 位置和时间 */}
-        <section>
-          <div className="flex items-stretch gap-4 p-4 rounded-2xl bg-primary/5 dark:bg-white/5 border border-primary/10 dark:border-white/10 group">
-            <div className="relative size-14 rounded-xl overflow-hidden shadow-sm shrink-0">
-              <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: "url('https://picsum.photos/100/100')" }}></div>
-              <div className="absolute inset-0 bg-black/10"></div>
-            </div>
-            <div className="flex flex-col justify-center flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <Icon name="wb_sunny" className="text-primary dark:text-mood-neutral text-[16px]" />
-                <span className="text-xs font-bold uppercase tracking-wider text-primary dark:text-mood-neutral">{details.time}</span>
-              </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400 leading-tight">
-                记录地点 <span className="font-semibold text-gray-900 dark:text-gray-200">{details.location || '未设置'}</span>
-              </p>
-            </div>
-            <button
-              onClick={() => setShowEditModal(true)}
-              className="self-center p-2 rounded-full hover:bg-primary/10 dark:hover:bg-white/10 text-primary dark:text-mood-neutral transition-colors"
-            >
-              <Icon name="edit" size={20} />
+            <button onClick={() => navigate('/record/note')} className="ui-inline-action">
+              {recordCopy.openFullNote}
             </button>
           </div>
+
+          <div className="ui-input-shell">
+            <input
+              type="text"
+              value={quickNote}
+              onChange={(event) => setQuickNote(event.target.value)}
+              placeholder={recordCopy.quickNotePlaceholder}
+              className="ui-input"
+            />
+          </div>
+
+          {fullNote.trim().length > 0 && (
+            <p className="text-xs text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)] mt-3 line-clamp-2">完整注释：{fullNote}</p>
+          )}
         </section>
-      </main>
 
-      {/* 编辑详情弹窗 */}
-      {showEditModal && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="w-full max-w-sm bg-white dark:bg-card-dark rounded-3xl p-6 shadow-2xl animate-in slide-in-from-bottom-10 duration-300">
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6">编辑详情</h3>
+        <section className="ui-card p-4 animate-in fade-in slide-in-from-bottom-2">
+          <button
+            onClick={() => setShowExtras((prev) => !prev)}
+            className="w-full flex items-center justify-between gap-3 text-left"
+          >
+            <div>
+              <p className="ui-card-title mb-1">{recordCopy.extrasTitle}</p>
+              <p className="text-sm font-semibold">{extrasSummary}</p>
+            </div>
+            <Icon name={showExtras ? 'expand_less' : 'expand_more'} />
+          </button>
 
-            <div className="space-y-4">
+          {showExtras && (
+            <div className="mt-4 flex flex-col gap-4 animate-in fade-in slide-in-from-top-2">
               <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">位置</label>
-                <div className="flex items-center gap-2 p-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 focus-within:ring-2 ring-primary/20 transition-all">
-                  <Icon name="location_on" className="text-primary" />
+                <label className="ui-field-label">{recordCopy.locationLabel}</label>
+                <div className="ui-input-shell mt-2">
                   <input
                     type="text"
-                    value={details.location}
-                    onChange={(e) => setDetails({ ...details, location: e.target.value })}
-                    placeholder="输入位置"
-                    className="bg-transparent border-none p-0 text-gray-900 dark:text-white w-full focus:ring-0 font-medium"
+                    value={location}
+                    onChange={(event) => setLocation(event.target.value)}
+                    placeholder={recordCopy.locationPlaceholder}
+                    className="ui-input"
                   />
                 </div>
               </div>
+
               <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">时段</label>
-                <div className="flex items-center gap-2 p-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 focus-within:ring-2 ring-primary/20 transition-all">
-                  <Icon name="schedule" className="text-primary" />
-                  <select
-                    value={details.time}
-                    onChange={(e) => setDetails({ ...details, time: e.target.value })}
-                    className="bg-transparent border-none p-0 text-gray-900 dark:text-white w-full focus:ring-0 font-medium"
-                  >
-                    <option>上午时段</option>
-                    <option>下午时段</option>
-                    <option>晚间时段</option>
-                    <option>凌晨</option>
-                  </select>
-                </div>
+                <label className="ui-field-label">{recordCopy.imagesLabel}</label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={handleUploadImages}
+                />
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  className="ui-action-secondary mt-2 px-4"
+                >
+                  <Icon name="add_photo_alternate" size={16} />
+                  {uploading ? recordCopy.imageUploading : recordCopy.addImage}
+                </button>
+
+                {images.length > 0 && (
+                  <div className="mt-3 grid grid-cols-4 gap-2">
+                    {images.map((img, index) => (
+                      <div key={`${img}-${index}`} className="relative size-16 rounded-2xl overflow-hidden bg-[var(--ui-surface-muted-light)] dark:bg-[var(--ui-surface-muted-dark)]">
+                        <img src={img} alt={`图片${index + 1}`} className="w-full h-full object-cover" />
+                        <button
+                          onClick={() => setImages((prev) => prev.filter((_, currentIndex) => currentIndex !== index))}
+                          className="absolute top-1 right-1 size-5 rounded-full bg-black/60 text-white flex items-center justify-center"
+                        >
+                          <Icon name="close" size={12} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
-
-            <div className="flex gap-3 mt-8">
-              <button
-                onClick={() => setShowEditModal(false)}
-                className="flex-1 py-3 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-              >
-                取消
-              </button>
-              <button
-                onClick={() => setShowEditModal(false)}
-                className="flex-1 py-3 rounded-xl bg-primary text-white font-bold shadow-lg shadow-primary/20 hover:bg-primary-dark transition-colors"
-              >
-                确认修改
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          )}
+        </section>
+      </main>
     </div>
   );
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

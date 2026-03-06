@@ -100,7 +100,7 @@ export async function fetchSettings(): Promise<SettingsData> {
         notification_enabled: true,
         notification_time: '20:00',
         reminders: [{ id: '1', time: '20:00', enabled: true, days: [1, 2, 3, 4, 5, 6, 7] }],
-        theme_id: 'classic',
+        theme_id: 'forest',
         dark_mode: false,
         dark_mode_option: 'system',
         weekly_insight_cache: {}
