@@ -2,7 +2,7 @@
 
 MoodListener is a local-first mood journaling app. It helps users quickly capture how they feel, revisit patterns over time, and keep personal records on-device without requiring a cloud account.
 
-Current version: `1.3.1`
+Current version: `1.3.2`
 
 ## Product Direction
 

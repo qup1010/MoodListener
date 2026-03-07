@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [1.3.2] - 2026-03-07
 
 ### Changed
 - Reworked local reminder scheduling so notifications are now planned as independent entries for the next 14 days instead of a single endlessly repeating reminder.

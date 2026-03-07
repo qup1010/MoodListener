@@ -1,4 +1,4 @@
-﻿/**
+/**
  * API 服务层封装 - 本地离线版
  * 自动检测运行环境，在 Web 使用 localStorage，在原生使用 SQLite
  */
@@ -1415,7 +1415,7 @@ interface BackupPayloadV2 {
 }
 
 const BACKUP_VERSION_V2 = 2;
-const APP_VERSION_V2 = '1.3.1';
+const APP_VERSION_V2 = '1.3.2';
 
 const collectBackupPayloadV2 = async (): Promise<BackupPayloadV2> => {
     const [entries, groups, settings, profile] = await Promise.all([
@@ -1780,8 +1780,3 @@ export async function refreshWeeklyInsightV2(force = false, weekStart?: string):
 
     return insight;
 }
-
-
-
-
-

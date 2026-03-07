@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '../components/Icon';
 
-const APP_VERSION = '1.3.1';
+const APP_VERSION = '1.3.2';
 
 const features = [
   { icon: 'edit_note', title: '情绪记录', desc: '随时记下你当下的感受。' },

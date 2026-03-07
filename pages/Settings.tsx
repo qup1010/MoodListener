@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '../components/Icon';
 import { THEMES, toggleDarkMode, applyTheme, DarkModeOption, syncThemeFromSettings } from '../theme';
@@ -516,7 +516,7 @@ export const Settings: React.FC = () => {
                 <div className={iconClassName}><Icon name="info" className="text-[22px]" /></div>
                 <div>
                   <div className="font-semibold">软件信息</div>
-                  <div className="text-xs text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">版本 1.3.1</div>
+                  <div className="text-xs text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">版本 1.3.2</div>
                 </div>
               </div>
               <Icon name="chevron_right" size={20} className="text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]" />
