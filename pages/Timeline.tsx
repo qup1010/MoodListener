@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '../components/Icon';
+import { MoodFaceIcon } from '../components/MoodFaceIcon';
 import { deleteEntryV2, fetchEntriesV2, searchEntriesV2 } from '../services';
 import { EntryV2, MoodScore } from '../types';
 import { emptyStateCopy } from '../src/constants/copywriting';
-import { getMoodMeta } from '../src/constants/moodV2';
+import { getMoodMeta, softenMoodColor } from '../src/constants/moodV2';
 import { confirmAction, showToast } from '../src/ui/feedback';
 
 const formatRelativeDate = (dateText: string) => {
@@ -106,18 +107,17 @@ export const Timeline: React.FC = () => {
   };
 
   const filterText = useMemo(() => {
-    if (!filterMood) return '全部情绪';
+    if (!filterMood) return '\u5168\u90e8\u60c5\u7eea';
     const mood = getMoodMeta(filterMood);
-    return `${filterMood} 分 · ${mood.label}`;
+    return mood.label;
   }, [filterMood]);
 
   const moodFilters: Array<{ label: string; value: MoodScore | null }> = [
-    { label: '全部', value: null },
-    { label: '5 分', value: 5 },
-    { label: '4 分', value: 4 },
-    { label: '3 分', value: 3 },
-    { label: '2 分', value: 2 },
-    { label: '1 分', value: 1 }
+    { label: '\u5168\u90e8', value: null },
+    ...([5, 4, 3, 2, 1] as MoodScore[]).map((score) => ({
+      label: getMoodMeta(score).label,
+      value: score
+    }))
   ];
 
   const hideTools = !loading && !searching && entries.length === 0 && !searchQuery.trim() && filterMood === null;
@@ -168,7 +168,7 @@ export const Timeline: React.FC = () => {
                   <button
                     key={item.label}
                     onClick={() => setFilterMood(item.value)}
-                    className={`whitespace-nowrap rounded-full border px-3 py-2 text-xs font-semibold ${active ? 'border-primary bg-primary text-white shadow-sm' : 'border-[var(--ui-border-subtle-light)] bg-white/60 text-[var(--ui-text-primary-light)] dark:border-[var(--ui-border-subtle-dark)] dark:bg-white/5 dark:text-[var(--ui-text-primary-dark)]'}`}
+                    className={`whitespace-nowrap rounded-full border px-3 py-2 text-xs font-semibold ${active ? 'border-white/80 bg-white text-[var(--ui-text-primary-light)] shadow-sm' : 'border-[var(--ui-border-subtle-light)] bg-white/58 text-[var(--ui-text-secondary-light)] dark:border-[var(--ui-border-subtle-dark)] dark:bg-white/5 dark:text-[var(--ui-text-secondary-dark)]'}`}
                   >
                     {item.label}
                   </button>
@@ -204,6 +204,7 @@ export const Timeline: React.FC = () => {
               const dateLabel = formatRelativeDate(entry.date);
               const activityText = (entry.activities || []).slice(0, 3).map((item) => item.name).join(' · ');
               const preview = getNotePreview(entry);
+              const moodTextColor = softenMoodColor(mood.color, 0.3);
 
               return (
                 <article
@@ -211,13 +212,8 @@ export const Timeline: React.FC = () => {
                   className="ui-card ui-card--subtle cursor-pointer p-4"
                   onClick={() => navigate(`/entry/${entry.id}`)}
                 >
-                  <div className="flex items-start gap-3">
-                    <div
-                      className="flex size-14 shrink-0 items-center justify-center rounded-[1.35rem]"
-                      style={{ backgroundColor: mood.softColor, color: mood.color }}
-                    >
-                      <Icon name={mood.icon} fill size={26} />
-                    </div>
+                  <div className="flex items-start gap-4">
+                    <MoodFaceIcon mood={mood} size={68} className="mt-1" />
 
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-3">
@@ -225,11 +221,11 @@ export const Timeline: React.FC = () => {
                           <div className="text-sm font-semibold text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">
                             {dateLabel}
                           </div>
-                          <div className="mt-1 flex items-center gap-3">
-                            <div className="text-[1.9rem] font-black leading-none" style={{ color: mood.color }}>
+                          <div className="mt-1 flex items-end gap-3">
+                            <div className="text-[1.38rem] font-extrabold leading-none sm:text-[1.5rem]" style={{ color: moodTextColor }}>
                               {mood.label}
                             </div>
-                            <div className="text-lg font-semibold text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">
+                            <div className="text-[1.05rem] font-medium text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">
                               {entry.time}
                             </div>
                           </div>
@@ -237,21 +233,21 @@ export const Timeline: React.FC = () => {
 
                         <button
                           onClick={(event) => void handleDelete(event, Number(entry.id))}
-                          className="shrink-0 text-[var(--ui-text-secondary-light)] transition-colors hover:text-red-500 dark:text-[var(--ui-text-secondary-dark)]"
-                          aria-label="删除"
+                          className="flex size-9 shrink-0 items-center justify-center rounded-full border border-[var(--ui-border-subtle-light)] bg-white/58 text-[var(--ui-text-secondary-light)] transition-colors hover:text-red-500 dark:border-[var(--ui-border-subtle-dark)] dark:bg-white/5 dark:text-[var(--ui-text-secondary-dark)]"
+                          aria-label={'\u5220\u9664'}
                         >
-                          <Icon name="delete_outline" size={18} />
+                          <Icon name="more_horiz" size={18} />
                         </button>
                       </div>
 
                       {activityText && (
-                        <p className="mt-3 text-base font-bold leading-6 text-primary line-clamp-1">
+                        <p className="mt-3 text-[1rem] font-semibold leading-6 text-[var(--ui-text-secondary-light)] line-clamp-1 dark:text-[var(--ui-text-secondary-dark)]">
                           {activityText}
                         </p>
                       )}
 
                       {preview && (
-                        <p className="mt-3 text-base leading-7 text-[var(--ui-text-secondary-light)] line-clamp-2 dark:text-[var(--ui-text-secondary-dark)]">
+                        <p className="mt-3 text-[1.02rem] leading-7 text-[var(--ui-text-primary-light)] line-clamp-2 dark:text-[var(--ui-text-primary-dark)]">
                           {preview}
                         </p>
                       )}

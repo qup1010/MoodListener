@@ -5,6 +5,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '../components/Icon';
+import { MoodFaceIcon } from '../components/MoodFaceIcon';
 import {
   clearRecordDraftV2,
   createEntryV2,
@@ -122,7 +123,7 @@ export const RecordMood: React.FC = () => {
       message: recordCopy.backConfirmMessage,
       confirmText: recordCopy.backConfirmLeave,
       cancelText: recordCopy.backConfirmStay,
-      danger: true
+      confirmTone: 'primary'
     });
 
     if (shouldLeave) {
@@ -230,14 +231,9 @@ export const RecordMood: React.FC = () => {
 
       <main className="page-content pb-8 overflow-y-auto">
         <section className="ui-card ui-card--hero p-4 animate-in fade-in slide-in-from-bottom-2">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <p className="ui-card-title mb-1">情绪梯度</p>
-              <h2 className="text-lg font-extrabold">{recordCopy.moodPrompt}</h2>
-            </div>
-            <div className="ui-icon-chip size-10">
-              <Icon name="neurology" size={20} />
-            </div>
+          <div className="mb-4 text-center">
+            <p className="ui-card-title mb-1">{'\u60c5\u7eea\u68af\u5ea6'}</p>
+            <h2 className="text-lg font-extrabold">{recordCopy.moodPrompt}</h2>
           </div>
           <div className="grid grid-cols-5 gap-2">
             {MOOD_LEVELS.map((item) => {
@@ -246,17 +242,15 @@ export const RecordMood: React.FC = () => {
                 <button
                   key={item.score}
                   onClick={() => setMoodScore(item.score)}
-                  className="rounded-[20px] border px-2 py-3.5 flex flex-col items-center gap-1.5 transition-all"
+                  className="flex flex-col items-center gap-2 rounded-[18px] px-1 py-2 transition-all"
                   style={{
-                    borderColor: active ? item.color : 'var(--ui-border-subtle-light)',
-                    background: active ? item.softColor : 'rgba(255,255,255,0.55)',
-                    transform: active ? 'translateY(-2px) scale(1.02)' : 'none',
-                    boxShadow: active ? `0 12px 24px -18px ${item.color}` : 'none'
+                    background: active ? 'rgba(255,255,255,0.72)' : 'transparent',
+                    boxShadow: active ? '0 16px 28px -22px rgba(24,22,18,0.35)' : 'none',
+                    transform: active ? 'translateY(-2px)' : 'none'
                   }}
                 >
-                  <Icon name={item.icon} className="text-[24px]" style={{ color: active ? item.color : 'var(--ui-text-secondary-light)' }} />
-                  <span className="text-[10px] font-black tracking-[0.16em]" style={{ color: active ? item.color : 'var(--ui-text-secondary-light)' }}>{item.shortLabel}</span>
-                  <span className="text-[11px] font-semibold" style={{ color: active ? item.color : 'var(--ui-text-primary-light)' }}>{item.label}</span>
+                  <MoodFaceIcon mood={item} size={56} />
+                  <span className="text-[10px] font-bold leading-4 sm:text-[11px]" style={{ color: item.displayColor }}>{item.label}</span>
                 </button>
               );
             })}

@@ -1,9 +1,7 @@
-/**
- * v1.3 记录详情页
- */
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Icon } from '../components/Icon';
+import { MoodFaceIcon } from '../components/MoodFaceIcon';
 import { deleteEntryV2, fetchActivityGroups, fetchEntryV2, updateEntryV2 } from '../services';
 import { ActivityGroupWithItems, EntryV2, MoodScore } from '../types';
 import { MOOD_LEVELS, getMoodMeta } from '../src/constants/moodV2';
@@ -40,15 +38,14 @@ export const EntryDetail: React.FC = () => {
 
       setEntry(entryData);
       setGroups(activityGroups);
-
       setMoodScore(entryData.mood_score);
       setQuickNote(entryData.quick_note || '');
       setFullNote(entryData.full_note || '');
       setLocation(entryData.location || '');
       setActivityIds(entryData.activity_ids || []);
     } catch (error) {
-      console.error('加载记录详情失败:', error);
-      showToast('记录不存在或已删除', 'error');
+      console.error('load entry detail failed:', error);
+      showToast('记录不存在或已被删除', 'error');
       navigate('/history', { replace: true });
     } finally {
       setLoading(false);
@@ -72,7 +69,7 @@ export const EntryDetail: React.FC = () => {
       await deleteEntryV2(Number(entry.id));
       navigate('/history', { replace: true });
     } catch (error) {
-      console.error('删除失败:', error);
+      console.error('delete entry failed:', error);
       showToast('删除失败，请重试', 'error');
     }
   };
@@ -94,7 +91,7 @@ export const EntryDetail: React.FC = () => {
       setEditing(false);
       showToast('修改已保存', 'success');
     } catch (error) {
-      console.error('保存失败:', error);
+      console.error('save entry failed:', error);
       showToast('保存失败，请重试', 'error');
     } finally {
       setSaving(false);
@@ -118,8 +115,8 @@ export const EntryDetail: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background-light dark:bg-background-dark text-gray-500">
-        加载中...
+      <div className="page-shell min-h-screen flex items-center justify-center text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">
+        {'加载中...'}
       </div>
     );
   }
@@ -129,53 +126,62 @@ export const EntryDetail: React.FC = () => {
   const mood = getMoodMeta(editing ? moodScore : entry.mood_score);
 
   return (
-    <div className="relative flex min-h-screen w-full flex-col bg-background-light dark:bg-background-dark font-display text-[#121617] dark:text-gray-100 antialiased">
-      <header className="sticky top-0 z-30 flex items-center justify-between px-4 py-3 bg-background-light/90 dark:bg-background-dark/90 backdrop-blur-md border-b border-gray-200/60 dark:border-gray-800/60">
-        <button onClick={() => navigate('/history', { replace: true })} className="size-10 rounded-full flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10">
-          <Icon name="arrow_back_ios_new" />
-        </button>
-        <h1 className="text-lg font-bold">{editing ? '编辑记录' : '记录详情'}</h1>
-        {editing ? (
-          <button onClick={() => setEditing(false)} className="text-sm font-semibold text-gray-500">取消</button>
-        ) : (
-          <button onClick={() => setEditing(true)} className="size-10 rounded-full flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10">
-            <Icon name="edit" className="text-primary" />
+    <div className="page-shell relative flex min-h-screen w-full flex-col animate-in fade-in slide-in-from-bottom-2">
+      <header className="page-header px-4 py-3">
+        <div className="flex items-center justify-between gap-3">
+          <button onClick={() => navigate('/history', { replace: true })} className="size-10 rounded-full flex items-center justify-center bg-white/55 dark:bg-white/5 border border-[var(--ui-border-subtle-light)] dark:border-[var(--ui-border-subtle-dark)]">
+            <Icon name="arrow_back_ios_new" />
           </button>
-        )}
+          <h1 className="text-lg font-extrabold tracking-tight text-[var(--ui-text-primary-light)] dark:text-[var(--ui-text-primary-dark)]">
+            {editing ? '编辑记录' : '记录详情'}
+          </h1>
+          {editing ? (
+            <button onClick={() => setEditing(false)} className="text-sm font-semibold text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">
+              {'取消'}
+            </button>
+          ) : (
+            <button onClick={() => setEditing(true)} className="size-10 rounded-full flex items-center justify-center bg-white/55 dark:bg-white/5 border border-[var(--ui-border-subtle-light)] dark:border-[var(--ui-border-subtle-dark)]">
+              <Icon name="edit" className="text-primary" />
+            </button>
+          )}
+        </div>
       </header>
 
-      <main className="flex-1 px-4 py-4 pb-8 overflow-y-auto flex flex-col gap-4">
-        <section className="ui-card p-4">
-          <div className="flex items-center justify-between mb-2">
+      <main className="page-content flex-1 overflow-y-auto pb-8">
+        <section className="ui-card ui-card--hero p-4">
+          <div className="flex items-start justify-between gap-4">
             <div>
-              <div className="text-sm font-bold">{entry.date} {entry.time}</div>
-              <div className="text-xs text-gray-500">情绪 {editing ? moodScore : entry.mood_score} 分</div>
+              <div className="text-sm font-semibold text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">{entry.date} {entry.time}</div>
+              <div className="mt-1 text-xs text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">{'情绪 '}{editing ? moodScore : entry.mood_score}{' / 5'}</div>
             </div>
-            <div className="size-10 rounded-full flex items-center justify-center" style={{ backgroundColor: mood.softColor, color: mood.color }}>
-              <Icon name={mood.icon} fill />
-            </div>
+            <MoodFaceIcon mood={mood} size={56} />
           </div>
 
-          {editing ? (
-            <div className="grid grid-cols-5 gap-2 mt-3">
+          {editing && (
+            <div className="mt-4 grid grid-cols-5 gap-2">
               {MOOD_LEVELS.map((item) => {
                 const active = moodScore === item.score;
                 return (
                   <button
                     key={item.score}
                     onClick={() => setMoodScore(item.score)}
-                    className={`rounded-lg border px-2 py-2 text-xs font-semibold ${active ? 'border-primary bg-primary/10 text-primary' : 'border-gray-200 dark:border-gray-700 text-gray-500'}`}
+                    className="flex flex-col items-center gap-2 rounded-[16px] px-1 py-2 transition-all"
+                    style={{
+                      background: active ? 'rgba(255,255,255,0.72)' : 'transparent',
+                      boxShadow: active ? '0 12px 24px -22px rgba(24,22,18,0.35)' : 'none'
+                    }}
                   >
-                    {item.label}
+                    <MoodFaceIcon mood={item} size={44} />
+                    <span className="text-[10px] font-bold leading-4" style={{ color: item.displayColor }}>{item.label}</span>
                   </button>
                 );
               })}
             </div>
-          ) : null}
+          )}
         </section>
 
         <section className="ui-card p-4">
-          <div className="text-sm font-bold mb-2">快速笔记</div>
+          <div className="text-sm font-bold mb-2">{'快速笔记'}</div>
           {editing ? (
             <input
               type="text"
@@ -184,12 +190,12 @@ export const EntryDetail: React.FC = () => {
               className="w-full h-11 rounded-lg border border-gray-200 dark:border-gray-700 px-3 bg-white dark:bg-gray-800"
             />
           ) : (
-            <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{entry.quick_note || '无'}</p>
+            <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{entry.quick_note || '暂无'}</p>
           )}
         </section>
 
         <section className="ui-card p-4">
-          <div className="text-sm font-bold mb-2">完整注释</div>
+          <div className="text-sm font-bold mb-2">{'完整注释'}</div>
           {editing ? (
             <textarea
               value={fullNote}
@@ -198,12 +204,12 @@ export const EntryDetail: React.FC = () => {
               className="w-full rounded-lg border border-gray-200 dark:border-gray-700 p-3 resize-none bg-white dark:bg-gray-800"
             />
           ) : (
-            <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{entry.full_note || '无'}</p>
+            <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{entry.full_note || '暂无'}</p>
           )}
         </section>
 
         <section className="ui-card p-4">
-          <div className="text-sm font-bold mb-2">活动</div>
+          <div className="text-sm font-bold mb-2">{'活动'}</div>
           {editing ? (
             <div className="flex flex-col gap-3 max-h-[40vh] overflow-y-auto">
               {groups.map((group) => (
@@ -227,12 +233,12 @@ export const EntryDetail: React.FC = () => {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-gray-700 dark:text-gray-300">{selectedActivities.length > 0 ? selectedActivities.join(' · ') : '无'}</p>
+            <p className="text-sm text-gray-700 dark:text-gray-300">{selectedActivities.length > 0 ? selectedActivities.join(' \u00b7 ') : '暂无'}</p>
           )}
         </section>
 
         <section className="ui-card p-4">
-          <div className="text-sm font-bold mb-2">位置</div>
+          <div className="text-sm font-bold mb-2">{'位置'}</div>
           {editing ? (
             <input
               type="text"
@@ -241,7 +247,7 @@ export const EntryDetail: React.FC = () => {
               className="w-full h-10 rounded-lg border border-gray-200 dark:border-gray-700 px-3 bg-white dark:bg-gray-800"
             />
           ) : (
-            <p className="text-sm text-gray-700 dark:text-gray-300">{entry.location || '无'}</p>
+            <p className="text-sm text-gray-700 dark:text-gray-300">{entry.location || '暂无'}</p>
           )}
         </section>
       </main>
@@ -253,7 +259,7 @@ export const EntryDetail: React.FC = () => {
           </button>
         ) : (
           <button onClick={() => void handleDelete()} className="w-full h-12 rounded-xl border border-red-400 text-red-500 font-bold">
-            删除记录
+            {'删除记录'}
           </button>
         )}
       </div>

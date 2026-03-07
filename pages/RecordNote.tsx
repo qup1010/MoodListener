@@ -47,7 +47,7 @@ export const RecordNote: React.FC = () => {
       message: '未保存的修改将丢失，是否离开？',
       confirmText: '离开',
       cancelText: '继续编辑',
-      danger: true
+      confirmTone: 'primary'
     });
 
     if (shouldLeave) {

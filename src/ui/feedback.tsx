@@ -14,6 +14,7 @@ export interface ConfirmOptions {
   confirmText?: string;
   cancelText?: string;
   danger?: boolean;
+  confirmTone?: 'primary' | 'danger';
 }
 
 export interface PromptOptions {
@@ -182,7 +183,7 @@ export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
               <button
                 type="button"
                 onClick={() => closeConfirm(true)}
-                className={`h-11 rounded-xl text-sm font-semibold text-white transition-colors ${confirmState.options.danger ? 'bg-rose-600 hover:bg-rose-700' : 'bg-primary hover:brightness-110'}`}
+                className={`h-11 rounded-xl text-sm font-semibold text-white transition-colors ${(confirmState.options.confirmTone === 'danger' || confirmState.options.danger) ? 'bg-rose-600 hover:bg-rose-700' : 'bg-primary hover:brightness-110'}`}
               >
                 {confirmState.options.confirmText || '确认'}
               </button>

@@ -122,6 +122,7 @@ export interface SettingsData {
     dark_mode_option?: 'light' | 'dark' | 'system';
     amap_key?: string;
     weekly_insight_cache?: Record<string, WeeklyInsight>;
+    mood_icon_pack_id?: import('../src/constants/moodV2').MoodIconPackId;
 }
 
 export interface UpdateSettingsData {
@@ -240,19 +241,33 @@ export async function fetchStats(): Promise<StatsData> {
 // ==================== Settings API ====================
 
 export async function fetchSettings(): Promise<SettingsData> {
-    if (isNative) {
-        await ensureNativeStorageReady();
-        return settingsStorage.fetchSettings();
+    const settings = isNative
+        ? await (async () => {
+            await ensureNativeStorageReady();
+            return settingsStorage.fetchSettings();
+        })()
+        : webStorage.webFetchSettings();
+
+    if (typeof window !== 'undefined') {
+        localStorage.setItem('mood_icon_pack_id', settings.mood_icon_pack_id || 'playful');
     }
-    return webStorage.webFetchSettings();
+
+    return settings;
 }
 
 export async function updateSettings(data: UpdateSettingsData): Promise<SettingsData> {
-    if (isNative) {
-        await ensureNativeStorageReady();
-        return settingsStorage.updateSettings(data);
+    const settings = isNative
+        ? await (async () => {
+            await ensureNativeStorageReady();
+            return settingsStorage.updateSettings(data);
+        })()
+        : webStorage.webUpdateSettings(data);
+
+    if (typeof window !== 'undefined') {
+        localStorage.setItem('mood_icon_pack_id', settings.mood_icon_pack_id || 'playful');
     }
-    return webStorage.webUpdateSettings(data);
+
+    return settings;
 }
 
 // ==================== Export API ====================
@@ -624,8 +639,9 @@ const normalizeSnapshot = (input: Partial<BackupPayload>): BackupPayload => {
             : 'system',
         amap_key: input.settings?.amap_key,
         weekly_insight_cache: input.settings?.weekly_insight_cache && typeof input.settings.weekly_insight_cache === 'object'
-            ? input.settings.weekly_insight_cache
-            : {}
+                ? input.settings.weekly_insight_cache
+                : {},
+            mood_icon_pack_id: input.settings?.mood_icon_pack_id || 'playful'
     } as SettingsData;
 
     const profile = {
@@ -1476,7 +1492,7 @@ const persistImportedPayloadV2Native = async (payload: BackupPayloadV2): Promise
         }
 
         await db.run(
-            `UPDATE settings SET notification_enabled = ?, notification_time = ?, reminders = ?, theme_id = ?, dark_mode = ?, dark_mode_option = ?, amap_key = ?, weekly_insight_cache = ? WHERE id = 1`,
+            `UPDATE settings SET notification_enabled = ?, notification_time = ?, reminders = ?, theme_id = ?, dark_mode = ?, dark_mode_option = ?, amap_key = ?, weekly_insight_cache = ?, mood_icon_pack_id = ? WHERE id = 1`,
             [
                 payload.settings.notification_enabled ? 1 : 0,
                 payload.settings.notification_time || '20:00',

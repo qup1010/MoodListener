@@ -1,12 +1,13 @@
 ﻿import { fetchSettings, updateSettings } from './services';
 
 export const THEMES = [
-    { id: 'classic', name: '经典', primary: '194 148 62', primaryDark: '42 74 76', hex: '#c2943e' },
-    { id: 'ocean', name: '海洋', primary: '59 130 246', primaryDark: '30 58 138', hex: '#3b82f6' },
-    { id: 'forest', name: '森林', primary: '16 185 129', primaryDark: '6 78 59', hex: '#10b981' },
-    { id: 'rose', name: '玫瑰', primary: '244 63 94', primaryDark: '136 19 55', hex: '#f43f5e' },
-    { id: 'royal', name: '皇家', primary: '139 92 246', primaryDark: '76 29 149', hex: '#8b5cf6' },
-    { id: 'sunset', name: '日落', primary: '249 115 22', primaryDark: '154 52 18', hex: '#f97316' },
+    { id: 'forest', name: '森林', primary: '37 176 127', primaryDark: '21 95 78', hex: '#25b07f' },
+    { id: 'sand', name: '沙丘', primary: '201 154 90', primaryDark: '127 91 47', hex: '#c99a5a' },
+    { id: 'blush', name: '粉雾', primary: '227 143 167', primaryDark: '149 88 112', hex: '#e38fa7' },
+    { id: 'peach', name: '蜜桃', primary: '236 156 120', primaryDark: '156 95 68', hex: '#ec9c78' },
+    { id: 'ocean', name: '海盐', primary: '93 173 185', primaryDark: '56 104 119', hex: '#5dadb9' },
+    { id: 'iris', name: '鸢尾', primary: '138 132 196', primaryDark: '83 79 135', hex: '#8a84c4' },
+    { id: 'berry', name: '莓果', primary: '191 103 133', primaryDark: '117 61 82', hex: '#bf6785' }
 ];
 
 export interface UIThemeTokens {
@@ -117,7 +118,7 @@ export const initTheme = () => {
     document.documentElement.classList.remove('light');
 
     const savedThemeId = localStorage.getItem('themeId') || 'forest';
-    const theme = THEMES.find(t => t.id === savedThemeId) || THEMES[0];
+    const theme = THEMES.find((item) => item.id === savedThemeId) || THEMES[0];
     applyThemeColors(theme);
 };
 
@@ -188,7 +189,8 @@ export const syncThemeFromSettings = async () => {
 
         const themeId = settings.theme_id || 'forest';
         localStorage.setItem('themeId', themeId);
-        const theme = THEMES.find(t => t.id === themeId) || THEMES[0];
+        localStorage.setItem('mood_icon_pack_id', settings.mood_icon_pack_id || 'playful');
+        const theme = THEMES.find((item) => item.id === themeId) || THEMES[0];
         applyThemeColors(theme);
     } catch (error) {
         console.error('同步主题设置失败:', error);
@@ -210,7 +212,7 @@ export const toggleDarkMode = async (option: DarkModeOption) => {
 };
 
 export const applyTheme = async (themeId: string) => {
-    const theme = THEMES.find(t => t.id === themeId) || THEMES[0];
+    const theme = THEMES.find((item) => item.id === themeId) || THEMES[0];
     applyThemeColors(theme);
     localStorage.setItem('themeId', themeId);
 
@@ -222,6 +224,12 @@ export const applyTheme = async (themeId: string) => {
 };
 
 const applyThemeColors = (theme: typeof THEMES[0]) => {
-    document.documentElement.style.setProperty('--app-primary', theme.primary);
-    document.documentElement.style.setProperty('--app-primary-dark', theme.primaryDark);
+    const root = document.documentElement.style;
+    root.setProperty('--app-primary', theme.primary);
+    root.setProperty('--app-primary-dark', theme.primaryDark);
+    root.setProperty('--ui-brand-primary', theme.hex);
+    root.setProperty('--ui-brand-primary-strong', `rgb(${theme.primaryDark})`);
+    root.setProperty('--ui-border-strong-light', `color-mix(in srgb, ${theme.hex} 22%, transparent)`);
+    root.setProperty('--ui-border-strong-dark', `color-mix(in srgb, ${theme.hex} 30%, transparent)`);
+    root.setProperty('--ui-focus-ring', `color-mix(in srgb, ${theme.hex} 24%, transparent)`);
 };

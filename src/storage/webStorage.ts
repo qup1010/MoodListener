@@ -25,7 +25,8 @@ const DEFAULT_SETTINGS = {
     dark_mode: false,
     dark_mode_option: 'system',
     amap_key: undefined,
-    weekly_insight_cache: {}
+    weekly_insight_cache: {},
+    mood_icon_pack_id: 'playful'
 };
 
 const DEFAULT_PROFILE = {
@@ -285,6 +286,9 @@ export function initWebStorage(): void {
     if (settings.theme_id && !localStorage.getItem('themeId')) {
         localStorage.setItem('themeId', settings.theme_id);
     }
+    if (settings.mood_icon_pack_id && !localStorage.getItem('mood_icon_pack_id')) {
+        localStorage.setItem('mood_icon_pack_id', settings.mood_icon_pack_id);
+    }
 
     localStorage.setItem('moodlistener_initialized', 'true');
 }
@@ -403,7 +407,8 @@ export function webFetchSettings(): any {
         reminders: Array.isArray(raw?.reminders) ? raw.reminders : DEFAULT_SETTINGS.reminders,
         weekly_insight_cache: raw?.weekly_insight_cache && typeof raw.weekly_insight_cache === 'object'
             ? normalizeWeeklyInsightCache(raw.weekly_insight_cache)
-            : {}
+            : {},
+        mood_icon_pack_id: raw?.mood_icon_pack_id || DEFAULT_SETTINGS.mood_icon_pack_id
     };
 }
 
@@ -416,9 +421,16 @@ export function webUpdateSettings(data: any): any {
         reminders: Array.isArray(data?.reminders) ? data.reminders : settings.reminders,
         weekly_insight_cache: data?.weekly_insight_cache && typeof data.weekly_insight_cache === 'object'
             ? data.weekly_insight_cache
-            : settings.weekly_insight_cache
+            : settings.weekly_insight_cache,
+        mood_icon_pack_id: data?.mood_icon_pack_id || settings.mood_icon_pack_id
     };
     setItem(KEYS.SETTINGS, updated);
+    if (updated.theme_id) {
+        localStorage.setItem('themeId', updated.theme_id);
+    }
+    if (updated.mood_icon_pack_id) {
+        localStorage.setItem('mood_icon_pack_id', updated.mood_icon_pack_id);
+    }
     return updated;
 }
 
@@ -568,7 +580,8 @@ export function webImportSnapshot(snapshot: WebBackupSnapshot): void {
         ...(snapshot.settings || {}),
         id: 1,
         reminders: Array.isArray(snapshot.settings?.reminders) ? snapshot.settings.reminders : DEFAULT_SETTINGS.reminders,
-        weekly_insight_cache: snapshot.settings?.weekly_insight_cache || {}
+        weekly_insight_cache: snapshot.settings?.weekly_insight_cache || {},
+        mood_icon_pack_id: snapshot.settings?.mood_icon_pack_id || DEFAULT_SETTINGS.mood_icon_pack_id
     };
 
     const profile = {
@@ -602,6 +615,9 @@ export function webImportSnapshot(snapshot: WebBackupSnapshot): void {
     localStorage.setItem('darkMode', option);
     if (settings.theme_id) {
         localStorage.setItem('themeId', settings.theme_id);
+    }
+    if (settings.mood_icon_pack_id) {
+        localStorage.setItem('mood_icon_pack_id', settings.mood_icon_pack_id);
     }
 }
 
@@ -1073,7 +1089,8 @@ export function webImportSnapshotV2(snapshot: WebBackupSnapshotV2): void {
         ...(snapshot.settings || {}),
         id: 1,
         reminders: Array.isArray(snapshot.settings?.reminders) ? snapshot.settings.reminders : DEFAULT_SETTINGS.reminders,
-        weekly_insight_cache: snapshot.settings?.weekly_insight_cache || {}
+        weekly_insight_cache: snapshot.settings?.weekly_insight_cache || {},
+        mood_icon_pack_id: snapshot.settings?.mood_icon_pack_id || DEFAULT_SETTINGS.mood_icon_pack_id
     };
 
     const profile = {
@@ -1115,5 +1132,8 @@ export function webImportSnapshotV2(snapshot: WebBackupSnapshotV2): void {
     localStorage.setItem('darkMode', option);
     if (settings.theme_id) {
         localStorage.setItem('themeId', settings.theme_id);
+    }
+    if (settings.mood_icon_pack_id) {
+        localStorage.setItem('mood_icon_pack_id', settings.mood_icon_pack_id);
     }
 }

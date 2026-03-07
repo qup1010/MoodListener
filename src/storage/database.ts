@@ -37,7 +37,8 @@ CREATE TABLE IF NOT EXISTS settings (
     dark_mode INTEGER DEFAULT 0,
     dark_mode_option TEXT DEFAULT "system",
     weekly_insight_cache TEXT DEFAULT NULL,
-    amap_key TEXT DEFAULT NULL
+    amap_key TEXT DEFAULT NULL,
+    mood_icon_pack_id TEXT DEFAULT "playful"
 );
 
 CREATE TABLE IF NOT EXISTS user_profile (
@@ -286,9 +287,28 @@ export const getDBConnection = async (): Promise<SQLiteDBConnection> => {
                 // column exists
             }
 
+            try {
+                await dbConnection.execute('ALTER TABLE settings ADD COLUMN mood_icon_pack_id TEXT DEFAULT "playful"');
+            } catch {
+                // column exists
+            }
+
+            await dbConnection.execute(
+                'UPDATE settings SET mood_icon_pack_id = CASE ' +
+                'WHEN mood_icon_pack_id = "soft" THEN "pebble" ' +
+                'WHEN mood_icon_pack_id = "scribble" THEN "doodle" ' +
+                'WHEN mood_icon_pack_id = "bold" THEN "tile" ' +
+                'ELSE mood_icon_pack_id END ' +
+                'WHERE mood_icon_pack_id IN ("soft", "scribble", "bold")'
+            );
+
             await dbConnection.execute(
                 'UPDATE settings SET dark_mode_option = CASE WHEN dark_mode = 1 THEN "dark" ELSE "light" END ' +
                 'WHERE dark_mode_option IS NULL OR dark_mode_option NOT IN ("light", "dark", "system")'
+            );
+            await dbConnection.execute(
+                'UPDATE settings SET mood_icon_pack_id = "playful" ' +
+                'WHERE mood_icon_pack_id IS NULL OR mood_icon_pack_id NOT IN ("playful", "pebble", "minimal", "sticker", "doodle", "tile")'
             );
 
             await seedLegacyTags(dbConnection);

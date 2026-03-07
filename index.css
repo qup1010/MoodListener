@@ -350,8 +350,9 @@ textarea:focus-visible {
 .page-title {
   font-size: 1.5rem;
   line-height: 1.1;
-  font-weight: 800;
-  letter-spacing: -0.04em;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  color: color-mix(in srgb, var(--ui-text-primary-light) 74%, var(--ui-text-secondary-light) 26%);
 }
 
 .page-subtitle {

@@ -17,6 +17,7 @@ export interface SettingsData {
     dark_mode_option: 'light' | 'dark' | 'system';
     amap_key?: string;
     weekly_insight_cache: Record<string, any>;
+    mood_icon_pack_id: import('../constants/moodV2').MoodIconPackId;
 }
 
 export interface UpdateSettingsData {
@@ -28,6 +29,7 @@ export interface UpdateSettingsData {
     dark_mode_option?: 'light' | 'dark' | 'system';
     amap_key?: string;
     weekly_insight_cache?: Record<string, any>;
+    mood_icon_pack_id?: import('../constants/moodV2').MoodIconPackId;
 }
 
 export interface UserProfile {
@@ -91,7 +93,8 @@ export async function fetchSettings(): Promise<SettingsData> {
             dark_mode: !!row.dark_mode,
             dark_mode_option: darkModeOption,
             amap_key: row.amap_key,
-            weekly_insight_cache: weeklyInsightCache
+            weekly_insight_cache: weeklyInsightCache,
+            mood_icon_pack_id: row.mood_icon_pack_id || 'playful'
         };
     }
 
@@ -103,7 +106,8 @@ export async function fetchSettings(): Promise<SettingsData> {
         theme_id: 'forest',
         dark_mode: false,
         dark_mode_option: 'system',
-        weekly_insight_cache: {}
+        weekly_insight_cache: {},
+        mood_icon_pack_id: 'playful'
     };
 }
 
@@ -143,6 +147,10 @@ export async function updateSettings(data: UpdateSettingsData): Promise<Settings
     if (data.weekly_insight_cache !== undefined) {
         setClauses.push('weekly_insight_cache = ?');
         params.push(JSON.stringify(data.weekly_insight_cache));
+    }
+    if (data.mood_icon_pack_id !== undefined) {
+        setClauses.push('mood_icon_pack_id = ?');
+        params.push(data.mood_icon_pack_id);
     }
 
     if (setClauses.length > 0) {
