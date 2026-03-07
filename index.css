@@ -390,9 +390,7 @@ textarea:focus-visible {
 }
 
 .dark .ui-card--hero {
-  background:
-    linear-gradient(145deg, rgba(255, 241, 214, 0.08), rgba(255, 241, 214, 0) 48%),
-    linear-gradient(180deg, var(--ui-surface-hero-dark), var(--ui-surface-card-dark));
+  background: color-mix(in srgb, var(--ui-surface-card-dark) 88%, var(--ui-surface-hero-dark) 12%);
   border-color: var(--ui-border-strong-dark);
 }
 

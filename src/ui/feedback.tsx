@@ -184,7 +184,7 @@ export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
               <button
                 type="button"
                 onClick={() => closeConfirm(true)}
-                className={`h-11 rounded-xl text-sm font-semibold text-white transition-colors ${(confirmState.options.confirmTone === 'danger' || confirmState.options.danger) ? 'bg-rose-600 hover:bg-rose-700' : 'bg-primary hover:brightness-110'}`}
+                className={`h-11 rounded-xl text-sm font-semibold transition-colors ${(confirmState.options.confirmTone === 'danger' || confirmState.options.danger) ? 'bg-primary text-white hover:brightness-110 ring-1 ring-primary/20' : 'bg-primary text-white hover:brightness-110'}`}
               >
                 {confirmState.options.confirmText || '确认'}
               </button>

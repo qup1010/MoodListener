@@ -23,6 +23,9 @@ export const TagManagement: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [groups, setGroups] = useState<ActivityGroupWithItems[]>([]);
 
+  const groupActionButtonClass = 'flex size-8 items-center justify-center rounded-lg border border-gray-200 text-[var(--ui-text-secondary-light)] dark:border-gray-700 dark:text-[var(--ui-text-secondary-dark)]';
+  const itemActionButtonClass = 'flex size-7 items-center justify-center rounded-md border border-gray-200 text-[var(--ui-text-secondary-light)] dark:border-gray-700 dark:text-[var(--ui-text-secondary-dark)]';
+
   useEffect(() => {
     void loadGroups();
   }, []);
@@ -242,12 +245,12 @@ export const TagManagement: React.FC = () => {
                       <span className={`text-sm font-medium truncate ${activity.is_archived ? 'line-through text-gray-400' : 'text-gray-700 dark:text-gray-200'}`}>{activity.name}</span>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
-                      <button onClick={() => void handleRenameActivity(activity)} className="size-7 rounded-md border border-gray-200 dark:border-gray-700"><Icon name="edit" size={14} /></button>
-                      <button onClick={() => void moveActivityInGroup(group, activity.id, -1)} disabled={index === 0} className="size-7 rounded-md border border-gray-200 dark:border-gray-700 disabled:opacity-40"><Icon name="arrow_upward" size={14} /></button>
-                      <button onClick={() => void moveActivityInGroup(group, activity.id, 1)} disabled={index === group.activities.length - 1} className="size-7 rounded-md border border-gray-200 dark:border-gray-700 disabled:opacity-40"><Icon name="arrow_downward" size={14} /></button>
-                      <button onClick={() => void moveActivityToNextGroup(activity)} className="size-7 rounded-md border border-gray-200 dark:border-gray-700"><Icon name="redo" size={14} /></button>
-                      <button onClick={() => void handleArchiveActivity(activity)} className={`size-7 rounded-md border ${activity.is_archived ? 'border-emerald-300 text-emerald-600' : 'border-rose-300 text-rose-500'}`}>
-                        <Icon name={activity.is_archived ? 'unarchive' : 'archive'} size={14} />
+                      <button onClick={() => void handleRenameActivity(activity)} className={itemActionButtonClass}><Icon name="edit" size={14} className="shrink-0" /></button>
+                      <button onClick={() => void moveActivityInGroup(group, activity.id, -1)} disabled={index === 0} className={`${itemActionButtonClass} disabled:opacity-40`}><Icon name="arrow_upward" size={14} className="shrink-0" /></button>
+                      <button onClick={() => void moveActivityInGroup(group, activity.id, 1)} disabled={index === group.activities.length - 1} className={`${itemActionButtonClass} disabled:opacity-40`}><Icon name="arrow_downward" size={14} className="shrink-0" /></button>
+                      <button onClick={() => void moveActivityToNextGroup(activity)} className={itemActionButtonClass}><Icon name="redo" size={14} className="shrink-0" /></button>
+                      <button onClick={() => void handleArchiveActivity(activity)} className={`${itemActionButtonClass} border-primary/30 text-primary`}>
+                        <Icon name={activity.is_archived ? 'unarchive' : 'archive'} size={14} className="shrink-0" />
                       </button>
                     </div>
                   </div>

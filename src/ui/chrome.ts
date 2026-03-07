@@ -19,10 +19,11 @@ export const resolvePageChromeConfig = (pathname: string): PageChromeConfig => {
   }
 
   const isHome = pathname === '/home';
+  const showFab = pathname === '/history' || pathname === '/calendar' || pathname === '/stats' || pathname === '/settings';
 
   return {
     showTab: true,
-    showFab: !isHome,
-    fabAction: !isHome ? 'record' : 'none'
+    showFab: !isHome && showFab,
+    fabAction: !isHome && showFab ? 'record' : 'none'
   };
 };

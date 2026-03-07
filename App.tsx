@@ -172,6 +172,15 @@ const App: React.FC = () => {
   const [unlocking, setUnlocking] = useState(false);
   const appLockEnabledRef = useRef(false);
 
+  const lockImmediately = () => {
+    if (!appLockEnabledRef.current) return;
+    setLockEnabled(true);
+    setUnlocked(false);
+    setLockInput('');
+    setLockError('');
+    setLockReady(true);
+  };
+
   const refreshLockState = async (resetUnlock = false) => {
     try {
       const settings = await fetchSettings();
@@ -181,9 +190,7 @@ const App: React.FC = () => {
       setLockHash(settings.app_lock_password_hash || null);
       if (enabled) {
         if (resetUnlock) {
-          setUnlocked(false);
-          setLockInput('');
-          setLockError('');
+          lockImmediately();
         }
       } else {
         setUnlocked(true);
@@ -230,30 +237,40 @@ const App: React.FC = () => {
     };
 
     const setupAppLockLifecycle = async () => {
+      const handleAppLockChanged = () => {
+        void refreshLockState();
+      };
+
+      window.addEventListener('moodlistener:app-lock-changed', handleAppLockChanged);
+
       if (Capacitor.isNativePlatform()) {
         try {
           const { App: CapacitorApp } = await import('@capacitor/app');
           const listener = await CapacitorApp.addListener('appStateChange', ({ isActive }) => {
             if (!isActive) {
-              if (appLockEnabledRef.current) {
-                setUnlocked(false);
-                setLockInput('');
-                setLockError('');
-              }
+              lockImmediately();
               return;
             }
 
+            lockImmediately();
             void refreshLockState(true);
             void refreshNotifications();
           });
 
+          const pauseListener = await CapacitorApp.addListener('pause', () => {
+            lockImmediately();
+          });
+
           if (disposed) {
             listener.remove();
+            pauseListener.remove();
             return;
           }
 
           appStateCleanup = () => {
             listener.remove();
+            pauseListener.remove();
+            window.removeEventListener('moodlistener:app-lock-changed', handleAppLockChanged);
           };
         } catch (error) {
           console.error('App lock lifecycle setup failed:', error);
@@ -263,20 +280,18 @@ const App: React.FC = () => {
 
       const handleVisibility = () => {
         if (document.hidden) {
-          if (appLockEnabledRef.current) {
-            setUnlocked(false);
-            setLockInput('');
-            setLockError('');
-          }
+          lockImmediately();
           return;
         }
 
+        lockImmediately();
         void refreshLockState(true);
       };
 
       document.addEventListener('visibilitychange', handleVisibility);
       appStateCleanup = () => {
         document.removeEventListener('visibilitychange', handleVisibility);
+        window.removeEventListener('moodlistener:app-lock-changed', handleAppLockChanged);
       };
     };
 

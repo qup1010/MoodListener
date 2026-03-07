@@ -18,6 +18,23 @@ export const NotificationSettings: React.FC = () => {
   const [tempTime, setTempTime] = useState('20:00');
   const [tempDays, setTempDays] = useState<number[]>([1, 2, 3, 4, 5, 6, 7]);
 
+  const renderSwitch = (checked: boolean, onToggle: () => void) => (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      onClick={(event) => {
+        event.stopPropagation();
+        onToggle();
+      }}
+      className={`relative inline-flex h-7 w-12 items-center rounded-full p-1 transition-colors ${checked ? 'bg-primary' : 'bg-[var(--ui-surface-muted-light)] border border-[var(--ui-border-subtle-light)] dark:bg-[var(--ui-surface-muted-dark)] dark:border-[var(--ui-border-subtle-dark)]'}`}
+    >
+      <span
+        className={`block size-5 rounded-full bg-white shadow-sm transition-transform ${checked ? 'translate-x-5' : 'translate-x-0'}`}
+      />
+    </button>
+  );
+
   useEffect(() => {
     void loadSettings();
     void checkPermission();
@@ -190,9 +207,7 @@ export const NotificationSettings: React.FC = () => {
                 <span className="block text-xs text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">打开后会动态规划未来 14 天提醒，并自动跳过当天已完成记录后的催促。</span>
               </div>
             </div>
-            <div className={`relative h-7 w-12 rounded-full transition-colors ${enabled ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-600'}`}>
-              <div className={`absolute left-1 top-1 size-5 rounded-full bg-white transition-transform ${enabled ? 'translate-x-5' : 'translate-x-0'}`} />
-            </div>
+            {renderSwitch(enabled, () => setEnabled(!enabled))}
           </div>
         </div>
 
@@ -228,11 +243,9 @@ export const NotificationSettings: React.FC = () => {
                       </div>
                     </div>
                     <div className="flex shrink-0 items-center gap-3 border-l border-[var(--ui-border-subtle-light)] pl-4 dark:border-[var(--ui-border-subtle-dark)]">
-                      <div className={`relative h-6 w-11 cursor-pointer rounded-full transition-colors ${reminder.enabled ? 'bg-primary' : 'bg-[var(--ui-surface-muted-light)] border border-[var(--ui-border-subtle-light)] dark:bg-[var(--ui-surface-muted-dark)] dark:border-[var(--ui-border-subtle-dark)]'}`} onClick={() => toggleReminder(reminder.id)}>
-                        <div className={`absolute left-1 top-1 size-4 rounded-full bg-white shadow-sm transition-transform ${reminder.enabled ? 'translate-x-5' : 'translate-x-0'}`} />
-                      </div>
-                      <button onClick={() => void deleteReminder(reminder.id)} className="flex size-8 items-center justify-center rounded-full text-[var(--ui-text-secondary-light)] transition-colors hover:bg-red-500/10 hover:text-red-500 dark:text-[var(--ui-text-secondary-dark)]">
-                        <Icon name="delete" size={20} />
+                      {renderSwitch(reminder.enabled, () => toggleReminder(reminder.id))}
+                      <button onClick={() => void deleteReminder(reminder.id)} className="flex size-8 items-center justify-center rounded-full text-primary transition-colors hover:bg-primary/10 dark:text-primary">
+                        <Icon name="delete" size={18} className="shrink-0" />
                       </button>
                     </div>
                   </div>

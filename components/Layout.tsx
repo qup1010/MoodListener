@@ -1,4 +1,5 @@
-﻿import React from 'react';
+import React from 'react';
+import { Capacitor } from '@capacitor/core';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Icon } from './Icon';
 import { resolvePageChromeConfig } from '../src/ui/chrome';
@@ -8,13 +9,23 @@ interface LayoutProps {
 }
 
 const navItems = [
-  { key: 'home', path: '/home', label: '首页', icon: 'home' },
-  { key: 'history', path: '/history', label: '历史', icon: 'calendar_month', aliases: ['/calendar'] },
-  { key: 'stats', path: '/stats', label: '统计', icon: 'bar_chart' },
-  { key: 'settings', path: '/settings', label: '设置', icon: 'settings' }
+  { key: 'home', path: '/home', label: '??', icon: 'home' },
+  { key: 'history', path: '/history', label: '??', icon: 'calendar_month', aliases: ['/calendar'] },
+  { key: 'stats', path: '/stats', label: '??', icon: 'bar_chart' },
+  { key: 'settings', path: '/settings', label: '??', icon: 'settings' }
 ] as const;
 
-const triggerTabHaptic = () => {
+const triggerTabHaptic = async () => {
+  if (Capacitor.isNativePlatform()) {
+    try {
+      const { Haptics, ImpactStyle } = await import('@capacitor/haptics');
+      await Haptics.impact({ style: ImpactStyle.Light });
+      return;
+    } catch (error) {
+      console.error('tab haptic failed:', error);
+    }
+  }
+
   if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
     navigator.vibrate(10);
   }
@@ -24,7 +35,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const chromeConfig = resolvePageChromeConfig(location.pathname);
-  const contentPaddingClass = chromeConfig.showFab ? 'pb-36' : chromeConfig.showTab ? 'pb-28' : 'pb-0';
+  const contentPaddingClass = chromeConfig.showFab ? 'pb-40' : chromeConfig.showTab ? 'pb-28' : 'pb-0';
 
   const isNavActive = (path: string, aliases?: readonly string[]) => {
     if (location.pathname === path) return true;
@@ -32,8 +43,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     return !!aliases?.some((alias) => location.pathname === alias || location.pathname.startsWith(`${alias}/`));
   };
 
-  const handleTabPress = (path: string) => {
-    triggerTabHaptic();
+  const handleTabPress = async (path: string) => {
+    await triggerTabHaptic();
     if (location.pathname !== path) {
       navigate(path);
     }
@@ -45,15 +56,15 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
       {chromeConfig.showFab && chromeConfig.fabAction === 'record' && (
         <button
-          aria-label="快速记录"
-          className="fixed right-5 z-40 size-12 rounded-full border border-black/10 text-white shadow-[0_18px_28px_-18px_rgba(194,148,62,0.85)] transition-transform hover:scale-105 active:scale-95 dark:border-white/10"
+          aria-label="????"
+          className="fixed right-5 z-40 flex size-14 items-center justify-center rounded-full border border-black/10 text-white shadow-[0_18px_28px_-18px_rgba(194,148,62,0.85)] transition-transform hover:scale-105 active:scale-95 dark:border-white/10"
           style={{
-            bottom: 'calc(env(safe-area-inset-bottom) + 84px)',
+            bottom: 'calc(env(safe-area-inset-bottom) + 96px)',
             background: 'linear-gradient(135deg, rgb(var(--app-primary)), color-mix(in srgb, rgb(var(--app-primary)) 70%, #8f6522 30%))'
           }}
           onClick={() => navigate('/record')}
         >
-          <Icon name="add" className="text-2xl" />
+          <Icon name="add" size={30} className="shrink-0" />
         </button>
       )}
 
@@ -67,7 +78,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                   key={item.key}
                   aria-label={item.label}
                   className="group relative flex h-full flex-col items-center justify-center gap-1"
-                  onClick={() => handleTabPress(item.path)}
+                  onClick={() => void handleTabPress(item.path)}
                 >
                   {active && <div className="absolute top-0 h-[3.5px] w-11 rounded-full bg-primary" />}
                   <Icon
@@ -87,4 +98,3 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     </div>
   );
 };
-

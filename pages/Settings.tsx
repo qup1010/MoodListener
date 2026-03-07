@@ -14,6 +14,10 @@ import { APP_LOCK_MAX_LENGTH, APP_LOCK_MIN_LENGTH, hashAppLockPassword, isValidA
 
 export const Settings: React.FC = () => {
   const navigate = useNavigate();
+
+  const emitAppLockChanged = () => {
+    window.dispatchEvent(new Event('moodlistener:app-lock-changed'));
+  };
   const importInputRef = useRef<HTMLInputElement>(null);
   const [darkMode, setDarkMode] = useState<DarkModeOption>('system');
   const [currentTheme, setCurrentTheme] = useState('forest');
