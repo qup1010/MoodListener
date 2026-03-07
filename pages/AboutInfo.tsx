@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useLayoutEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '../components/Icon';
 
@@ -15,8 +15,27 @@ const stack = ['React', 'TypeScript', 'Capacitor', 'SQLite', 'TailwindCSS'];
 
 export const AboutInfo: React.FC = () => {
   const navigate = useNavigate();
+  const mainRef = useRef<HTMLElement | null>(null);
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
+
+  useLayoutEffect(() => {
+    const resetScroll = () => {
+      window.scrollTo(0, 0);
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+      if (document.scrollingElement) {
+        document.scrollingElement.scrollTop = 0;
+      }
+      if (mainRef.current) {
+        mainRef.current.scrollTop = 0;
+      }
+    };
+
+    resetScroll();
+    const frame = window.requestAnimationFrame(resetScroll);
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
 
   return (
     <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-background-light font-display text-[#121617] antialiased dark:bg-background-dark dark:text-gray-100">
@@ -31,7 +50,7 @@ export const AboutInfo: React.FC = () => {
         <div className="size-10 shrink-0" />
       </header>
 
-      <main className="flex flex-col gap-6 px-4 py-6">
+      <main ref={mainRef} className="flex flex-col gap-6 px-4 py-6">
         <section className="flex flex-col items-center py-8">
           <div className="mb-4 size-24 overflow-hidden rounded-[28%] bg-white ring-8 ring-gray-50/50 shadow-2xl shadow-primary/20 dark:ring-gray-800/50">
             <img src="icon.png" alt="MoodListener" className="h-full w-full object-contain" />

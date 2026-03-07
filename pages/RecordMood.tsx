@@ -21,6 +21,7 @@ import { confirmAction, showToast } from '../src/ui/feedback';
 
 const MAX_AUDIO_SECONDS = 120;
 const isNative = Capacitor.isNativePlatform();
+const AUDIO_PERMISSION_KEY = 'moodlistener.audioPermissionRequested';
 
 const isDraftEmpty = (draft: RecordDraftV2): boolean => {
   return (
@@ -191,22 +192,39 @@ export const RecordMood: React.FC = () => {
     streamRef.current = null;
   };
 
+  const requestMicrophoneStream = async () => {
+    const mediaDevices = navigator.mediaDevices;
+    if (!mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+      showToast('\u5f53\u524d\u8bbe\u5907\u6682\u4e0d\u652f\u6301\u5f55\u97f3', 'error');
+      return null;
+    }
+
+    try {
+      const stream = await mediaDevices.getUserMedia({ audio: true });
+      window.localStorage.setItem(AUDIO_PERMISSION_KEY, '1');
+      return stream;
+    } catch (error) {
+      console.error('request microphone permission failed:', error);
+      showToast('\u9700\u8981\u5148\u5141\u8bb8\u9ea6\u514b\u98ce\u6743\u9650\uff0c\u624d\u80fd\u5f00\u59cb\u5f55\u97f3', 'error');
+      return null;
+    }
+  };
+
   const handleStartRecording = async () => {
     if (!isNative || isRecording || audioBusy) return;
     if (audioClips.length >= 1) {
-      showToast('首版每条记录先保留 1 条声音片段', 'error');
-      return;
-    }
-
-    const mediaDevices = navigator.mediaDevices;
-    if (!mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
-      showToast('当前设备暂不支持录音', 'error');
+      showToast('\u9996\u7248\u6bcf\u6761\u8bb0\u5f55\u5148\u4fdd\u7559 1 \u6761\u58f0\u97f3\u7247\u6bb5', 'error');
       return;
     }
 
     try {
       setAudioBusy(true);
-      const stream = await mediaDevices.getUserMedia({ audio: true });
+      const stream = await requestMicrophoneStream();
+      if (!stream) {
+        setAudioBusy(false);
+        return;
+      }
+
       streamRef.current = stream;
       chunksRef.current = [];
 
@@ -240,10 +258,10 @@ export const RecordMood: React.FC = () => {
             createdAt: new Date().toISOString()
           };
           setAudioClips([clip]);
-          showToast('声音片段已保存到草稿', 'success');
+          showToast('\u58f0\u97f3\u7247\u6bb5\u5df2\u4fdd\u5b58\u5230\u8349\u7a3f', 'success');
         } catch (error: any) {
-          console.error('保存音频失败:', error);
-          showToast(error?.message || '保存声音片段失败', 'error');
+          console.error('\u4fdd\u5b58\u97f3\u9891\u5931\u8d25:', error);
+          showToast(error?.message || '\u4fdd\u5b58\u58f0\u97f3\u7247\u6bb5\u5931\u8d25', 'error');
         }
       };
 
@@ -260,10 +278,10 @@ export const RecordMood: React.FC = () => {
         });
       }, 1000);
     } catch (error) {
-      console.error('开始录音失败:', error);
+      console.error('\u5f00\u59cb\u5f55\u97f3\u5931\u8d25:', error);
       setAudioBusy(false);
       stopTracks();
-      showToast('麦克风权限未开启或设备不支持录音', 'error');
+      showToast('\u9ea6\u514b\u98ce\u6743\u9650\u672a\u5f00\u542f\u6216\u8bbe\u5907\u4e0d\u652f\u6301\u5f55\u97f3', 'error');
     }
   };
 

@@ -9,10 +9,10 @@ interface LayoutProps {
 }
 
 const navItems = [
-  { key: 'home', path: '/home', label: '??', icon: 'home' },
-  { key: 'history', path: '/history', label: '??', icon: 'calendar_month', aliases: ['/calendar'] },
-  { key: 'stats', path: '/stats', label: '??', icon: 'bar_chart' },
-  { key: 'settings', path: '/settings', label: '??', icon: 'settings' }
+  { key: 'home', path: '/home', label: '\u9996\u9875', icon: 'home' },
+  { key: 'history', path: '/history', label: '\u5386\u53f2', icon: 'calendar_month', aliases: ['/calendar'] },
+  { key: 'stats', path: '/stats', label: '\u7edf\u8ba1', icon: 'bar_chart' },
+  { key: 'settings', path: '/settings', label: '\u8bbe\u7f6e', icon: 'settings' }
 ] as const;
 
 const triggerTabHaptic = async () => {
@@ -56,7 +56,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
       {chromeConfig.showFab && chromeConfig.fabAction === 'record' && (
         <button
-          aria-label="????"
+          aria-label="\u5feb\u901f\u8bb0\u5f55"
           className="fixed right-5 z-40 flex size-14 items-center justify-center rounded-full border border-black/10 text-white shadow-[0_18px_28px_-18px_rgba(194,148,62,0.85)] transition-transform hover:scale-105 active:scale-95 dark:border-white/10"
           style={{
             bottom: 'calc(env(safe-area-inset-bottom) + 96px)',

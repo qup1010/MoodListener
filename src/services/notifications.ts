@@ -1,4 +1,4 @@
-﻿import { Capacitor } from '@capacitor/core';
+import { Capacitor } from '@capacitor/core';
 import { Reminder, fetchEntriesV2, fetchSettings } from '../../services';
 import { getIntelligentMessage } from '../constants/notificationMessages';
 import { toLocalDateString } from '../utils/date';
@@ -6,6 +6,7 @@ import { toLocalDateString } from '../utils/date';
 const CHANNEL_ID = 'mood_reminders';
 const SCHEDULE_DAYS = 14;
 const NOTIFICATION_BASE_ID = 500000;
+const NATIVE_TIMEOUT_MS = 4500;
 
 const isNative = Capacitor.isNativePlatform();
 
@@ -13,6 +14,15 @@ const addDays = (date: Date, offset: number) => {
   const next = new Date(date);
   next.setDate(next.getDate() + offset);
   return next;
+};
+
+const withTimeout = async <T,>(task: Promise<T>, label: string): Promise<T> => {
+  return await Promise.race([
+    task,
+    new Promise<T>((_, reject) => {
+      globalThis.setTimeout(() => reject(new Error(`${label} timed out`)), NATIVE_TIMEOUT_MS);
+    })
+  ]);
 };
 
 const reminderMatchesDate = (reminder: Reminder, date: Date) => {
@@ -35,24 +45,24 @@ const getRecentMoodAverage = async (): Promise<number | null> => {
 
 const ensurePermissionAndChannel = async () => {
   const { LocalNotifications } = await import('@capacitor/local-notifications');
-  const permission = await LocalNotifications.checkPermissions();
+  const permission = await withTimeout(LocalNotifications.checkPermissions(), 'checkPermissions');
   if (permission.display !== 'granted') {
-    const requested = await LocalNotifications.requestPermissions();
+    const requested = await withTimeout(LocalNotifications.requestPermissions(), 'requestPermissions');
     if (requested.display !== 'granted') return null;
   }
 
   try {
-    await LocalNotifications.createChannel({
+    await withTimeout(LocalNotifications.createChannel({
       id: CHANNEL_ID,
-      name: '心情提醒',
-      description: '提醒你记录当天的情绪',
+      name: '\u5fc3\u60c5\u63d0\u9192',
+      description: '\u63d0\u9192\u4f60\u8bb0\u5f55\u5f53\u5929\u7684\u60c5\u7eea',
       importance: 4,
       visibility: 1,
       sound: 'default',
       vibration: true
-    });
+    }), 'createChannel');
   } catch {
-    // ignore channel exists
+    // ignore channel exists or native no-op
   }
 
   return LocalNotifications;
@@ -64,9 +74,12 @@ export const scheduleIntelligentNotifications = async (enabled: boolean, reminde
   const LocalNotifications = await ensurePermissionAndChannel();
   if (!LocalNotifications) return 0;
 
-  const pending = await LocalNotifications.getPending();
+  const pending = await withTimeout(LocalNotifications.getPending(), 'getPending');
   if (pending.notifications.length > 0) {
-    await LocalNotifications.cancel({ notifications: pending.notifications.map((item) => ({ id: item.id })) });
+    await withTimeout(
+      LocalNotifications.cancel({ notifications: pending.notifications.map((item) => ({ id: item.id })) }),
+      'cancelPending'
+    );
   }
 
   if (!enabled) return 0;
@@ -109,20 +122,41 @@ export const scheduleIntelligentNotifications = async (enabled: boolean, reminde
   }
 
   if (!notifications.length) return 0;
-  await LocalNotifications.schedule({ notifications });
+  await withTimeout(LocalNotifications.schedule({ notifications }), 'scheduleNotifications');
   return notifications.length;
+};
+
+export const scheduleNotificationsInBackground = (
+  enabled: boolean,
+  reminders: Reminder[],
+  onSettled?: (count: number | null, error?: unknown) => void
+) => {
+  if (!isNative) {
+    onSettled?.(0);
+    return;
+  }
+
+  void scheduleIntelligentNotifications(enabled, reminders)
+    .then((count) => onSettled?.(count))
+    .catch((error) => {
+      console.error('background notification scheduling failed:', error);
+      onSettled?.(null, error);
+    });
 };
 
 export const cancelTodayRemainingNotifications = async () => {
   if (!isNative) return 0;
   const { LocalNotifications } = await import('@capacitor/local-notifications');
-  const pending = await LocalNotifications.getPending();
+  const pending = await withTimeout(LocalNotifications.getPending(), 'getPending');
   const today = toLocalDateString(new Date());
   const todayNotifications = pending.notifications.filter((item: any) => item.extra?.scheduleDate === today);
 
   if (!todayNotifications.length) return 0;
 
-  await LocalNotifications.cancel({ notifications: todayNotifications.map((item) => ({ id: item.id })) });
+  await withTimeout(
+    LocalNotifications.cancel({ notifications: todayNotifications.map((item) => ({ id: item.id })) }),
+    'cancelTodayNotifications'
+  );
   return todayNotifications.length;
 };
 
