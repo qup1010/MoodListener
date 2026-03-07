@@ -1,170 +1,376 @@
-/**
- * v1.3 日历页
- */
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '../components/Icon';
 import { fetchEntriesV2, fetchEntriesV2ByDate } from '../services';
-import { EntryV2 } from '../types';
+import { EntryV2, MoodScore } from '../types';
 import { getMoodMeta } from '../src/constants/moodV2';
 
 const monthNames = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
 const weekNames = ['日', '一', '二', '三', '四', '五', '六'];
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+type DaySummary = {
+  date: string;
+  count: number;
+  averageMood: number;
+  moodScore: MoodScore;
+};
+
+type HeatmapCell = {
+  date: string;
+  dayOfWeek: number;
+  month: number;
+  inCurrentYear: boolean;
+  summary: DaySummary | null;
+};
+
+const pad = (value: number) => String(value).padStart(2, '0');
+
+const toDateKey = (date: Date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+
+const parseDateKey = (dateKey: string) => {
+  const [year, month, day] = dateKey.split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
+
+const addDays = (date: Date, offset: number) => {
+  const next = new Date(date);
+  next.setDate(next.getDate() + offset);
+  return next;
+};
+
+const clampMood = (value: number): MoodScore => {
+  const rounded = Math.round(value);
+  return Math.min(5, Math.max(1, rounded || 3)) as MoodScore;
+};
+
+const buildYearHeatmap = (year: number, summaries: Record<string, DaySummary>) => {
+  const firstDay = new Date(year, 0, 1);
+  const lastDay = new Date(year, 11, 31);
+  const gridStart = addDays(firstDay, -firstDay.getDay());
+  const gridEnd = addDays(lastDay, 6 - lastDay.getDay());
+  const totalDays = Math.round((gridEnd.getTime() - gridStart.getTime()) / MS_PER_DAY) + 1;
+
+  const cells: HeatmapCell[] = Array.from({ length: totalDays }, (_, index) => {
+    const current = addDays(gridStart, index);
+    const date = toDateKey(current);
+    return {
+      date,
+      dayOfWeek: current.getDay(),
+      month: current.getMonth(),
+      inCurrentYear: current.getFullYear() === year,
+      summary: summaries[date] || null
+    };
+  });
+
+  const weekCount = Math.ceil(cells.length / 7);
+  const monthMarkers = monthNames
+    .map((label, monthIndex) => {
+      const monthStart = new Date(year, monthIndex, 1);
+      const column = Math.floor((monthStart.getTime() - gridStart.getTime()) / MS_PER_DAY / 7);
+      return { label, column };
+    })
+    .filter((marker, index, list) => index === 0 || marker.column !== list[index - 1].column);
+
+  return { cells, weekCount, monthMarkers };
+};
+
+const buildYearSummary = (yearEntries: EntryV2[]) => {
+  const daySet = new Set(yearEntries.map((entry) => entry.date));
+  const recordedDays = daySet.size;
+  const totalEntries = yearEntries.length;
+  const averageMood = totalEntries
+    ? Number((yearEntries.reduce((sum, entry) => sum + entry.mood_score, 0) / totalEntries).toFixed(1))
+    : 0;
+
+  return {
+    recordedDays,
+    totalEntries,
+    averageMood: totalEntries ? averageMood : null
+  };
+};
 
 export const CalendarView: React.FC = () => {
   const navigate = useNavigate();
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedDay, setSelectedDay] = useState(new Date().getDate());
-  const [loading, setLoading] = useState(true);
+  const todayKey = useMemo(() => toDateKey(new Date()), []);
+  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
+  const [selectedDate, setSelectedDate] = useState(todayKey);
+  const [loadingYear, setLoadingYear] = useState(true);
+  const [loadingDay, setLoadingDay] = useState(true);
+  const [yearEntries, setYearEntries] = useState<EntryV2[]>([]);
   const [dayEntries, setDayEntries] = useState<EntryV2[]>([]);
-  const [moodMap, setMoodMap] = useState<Record<number, number>>({});
-
-  const year = currentDate.getFullYear();
-  const month = currentDate.getMonth();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const firstDay = new Date(year, month, 1).getDay();
-
-  const selectedDate = useMemo(() => {
-    return `${year}-${String(month + 1).padStart(2, '0')}-${String(selectedDay).padStart(2, '0')}`;
-  }, [year, month, selectedDay]);
+  const [daySummaries, setDaySummaries] = useState<Record<string, DaySummary>>({});
 
   useEffect(() => {
-    void loadMonthData();
-  }, [year, month]);
+    void loadYearData();
+  }, [currentYear]);
 
   useEffect(() => {
     void loadDayEntries();
   }, [selectedDate]);
 
-  const loadMonthData = async () => {
-    setLoading(true);
+  const loadYearData = async () => {
+    setLoadingYear(true);
     try {
-      const startDate = `${year}-${String(month + 1).padStart(2, '0')}-01`;
-      const endDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(daysInMonth).padStart(2, '0')}`;
-
+      const startDate = `${currentYear}-01-01`;
+      const endDate = `${currentYear}-12-31`;
       const entries = await fetchEntriesV2({ startDate, endDate });
 
-      const nextMap: Record<number, number> = {};
+      const grouped = new Map<string, EntryV2[]>();
       entries.forEach((entry) => {
-        const day = Number(entry.date.split('-')[2]);
-        if (!nextMap[day]) {
-          nextMap[day] = entry.mood_score;
-        }
+        const bucket = grouped.get(entry.date) || [];
+        bucket.push(entry);
+        grouped.set(entry.date, bucket);
       });
 
-      setMoodMap(nextMap);
+      const summaries = Array.from(grouped.entries()).reduce<Record<string, DaySummary>>((acc, [date, list]) => {
+        const averageMood = list.reduce((sum, entry) => sum + entry.mood_score, 0) / list.length;
+        acc[date] = {
+          date,
+          count: list.length,
+          averageMood: Number(averageMood.toFixed(2)),
+          moodScore: clampMood(averageMood)
+        };
+        return acc;
+      }, {});
+
+      setYearEntries(entries);
+      setDaySummaries(summaries);
+
+      const nextSelectedDate = summaries[selectedDate]
+        ? selectedDate
+        : summaries[todayKey] && todayKey.startsWith(`${currentYear}-`)
+          ? todayKey
+          : Object.keys(summaries).sort().at(-1) || `${currentYear}-01-01`;
+
+      setSelectedDate(nextSelectedDate);
     } catch (error) {
-      console.error('加载月视图失败:', error);
+      console.error('加载全年热力图失败:', error);
+      setYearEntries([]);
+      setDaySummaries({});
+      setSelectedDate(`${currentYear}-01-01`);
     } finally {
-      setLoading(false);
+      setLoadingYear(false);
     }
   };
 
   const loadDayEntries = async () => {
+    setLoadingDay(true);
     try {
       const entries = await fetchEntriesV2ByDate(selectedDate);
       setDayEntries(entries);
     } catch (error) {
-      console.error('加载日期记录失败:', error);
+      console.error('加载当日记录失败:', error);
       setDayEntries([]);
+    } finally {
+      setLoadingDay(false);
     }
   };
 
-  const changeMonth = (offset: number) => {
-    const next = new Date(year, month + offset, 1);
-    setCurrentDate(next);
-    setSelectedDay(1);
-  };
+  const heatmap = useMemo(() => buildYearHeatmap(currentYear, daySummaries), [currentYear, daySummaries]);
+  const yearSummary = useMemo(() => buildYearSummary(yearEntries), [yearEntries]);
+  const selectedSummary = daySummaries[selectedDate] || null;
+  const selectedDateLabel = useMemo(() => {
+    const current = parseDateKey(selectedDate);
+    return `${current.getMonth() + 1}月${current.getDate()}日`;
+  }, [selectedDate]);
 
   return (
-    <div className="flex flex-col min-h-screen bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100">
-      <header className="sticky top-0 z-20 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
-        <div className="flex items-center justify-between px-5 py-4">
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white">日历</h1>
+    <div className="page-shell relative flex min-h-screen w-full flex-col animate-in fade-in slide-in-from-bottom-2">
+      <header className="page-header px-4 py-3">
+        <div className="flex items-center justify-between gap-3">
+          <p className="page-subtitle">把一年摊开来看，你会更容易看见自己的情绪季节。</p>
           <button
             onClick={() => navigate('/history')}
-            className="size-10 rounded-full bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 flex items-center justify-center"
+            className="flex size-10 items-center justify-center rounded-full border border-[var(--ui-border-subtle-light)] bg-white/60 dark:border-[var(--ui-border-subtle-dark)] dark:bg-white/5"
           >
-            <Icon name="list" className="text-gray-500" />
+            <Icon name="list" />
           </button>
         </div>
       </header>
 
-      <main className="flex-1 px-5 py-4 pb-6 overflow-y-auto">
-        <section className="ui-card p-4 mb-4">
-          <div className="flex items-center justify-between mb-4">
-            <button onClick={() => changeMonth(-1)} className="size-9 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center justify-center">
-              <Icon name="chevron_left" />
-            </button>
-            <h2 className="text-lg font-bold">{year}年 {monthNames[month]}</h2>
-            <button onClick={() => changeMonth(1)} className="size-9 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center justify-center">
-              <Icon name="chevron_right" />
-            </button>
+      <main className="page-content overflow-y-auto pb-8">
+        <section className="ui-card ui-card--hero p-4">
+          <div className="mb-4 flex items-start justify-between gap-3">
+            <div>
+              <p className="ui-card-title mb-1">年度热力图</p>
+              <h2 className="text-lg font-extrabold">{currentYear} 情绪轨迹</h2>
+              <p className="page-subtitle max-w-[18rem]">颜色越丰富，这一年就越有被认真生活过的痕迹。</p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setCurrentYear((value) => value - 1)}
+                className="flex size-10 items-center justify-center rounded-full border border-[var(--ui-border-subtle-light)] bg-white/60 dark:border-[var(--ui-border-subtle-dark)] dark:bg-white/5"
+              >
+                <Icon name="chevron_left" />
+              </button>
+              <button
+                onClick={() => setCurrentYear((value) => value + 1)}
+                className="flex size-10 items-center justify-center rounded-full border border-[var(--ui-border-subtle-light)] bg-white/60 dark:border-[var(--ui-border-subtle-dark)] dark:bg-white/5"
+              >
+                <Icon name="chevron_right" />
+              </button>
+            </div>
           </div>
 
-          <div className="grid grid-cols-7 mb-2">
-            {weekNames.map((day) => (
-              <div key={day} className="text-center text-xs text-gray-400">{day}</div>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-7 gap-y-3">
-            {Array.from({ length: firstDay }, (_, index) => (
-              <div key={`empty-${index}`} />
-            ))}
-
-            {Array.from({ length: daysInMonth }, (_, index) => {
-              const day = index + 1;
-              const selected = day === selectedDay;
-              const score = moodMap[day];
-              const mood = score ? getMoodMeta(score as any) : null;
-
-              return (
-                <button
-                  key={day}
-                  onClick={() => setSelectedDay(day)}
-                  className="flex flex-col items-center gap-1"
-                >
-                  <div className={`size-8 rounded-full flex items-center justify-center text-sm ${selected ? 'bg-primary text-white font-bold' : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
-                    {day}
-                  </div>
-                  <span
-                    className="size-1.5 rounded-full"
-                    style={{ backgroundColor: mood ? mood.color : 'rgba(148,163,184,0.6)' }}
-                  />
-                </button>
-              );
-            })}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="ui-kpi">
+              <div className="mb-1 text-[11px] font-semibold text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">记录天数</div>
+              <div className="text-xl font-extrabold">{yearSummary.recordedDays}</div>
+            </div>
+            <div className="ui-kpi">
+              <div className="mb-1 text-[11px] font-semibold text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">总记录</div>
+              <div className="text-xl font-extrabold">{yearSummary.totalEntries}</div>
+            </div>
+            <div className="ui-kpi">
+              <div className="mb-1 text-[11px] font-semibold text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">全年温度</div>
+              <div className="text-base font-extrabold leading-6">{yearSummary.averageMood ? getMoodMeta(clampMood(yearSummary.averageMood)).label : '-'}</div>
+            </div>
           </div>
         </section>
 
         <section className="ui-card p-4">
-          <div className="text-sm font-bold mb-3">{month + 1}月{selectedDay}日 记录</div>
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <p className="ui-card-title mb-1">热力墙</p>
+              <h2 className="text-base font-extrabold">全年情绪日历</h2>
+            </div>
+            <div className="flex items-center gap-2 text-[11px] text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">
+              <span>低落</span>
+              {[1, 2, 3, 4, 5].map((score) => {
+                const mood = getMoodMeta(score as MoodScore);
+                return <span key={score} className="size-3 rounded-[3px]" style={{ backgroundColor: mood.color }} />;
+              })}
+              <span>高涨</span>
+            </div>
+          </div>
 
-          {loading ? (
-            <p className="text-sm text-gray-500 py-5 text-center">加载中...</p>
+          {loadingYear ? (
+            <div className="ui-empty-state flex h-52 items-center justify-center">
+              <p className="text-sm font-semibold">正在铺开这一年的情绪轨迹...</p>
+            </div>
+          ) : (
+            <div className="rounded-[24px] border border-[var(--ui-border-subtle-light)] bg-[var(--ui-surface-muted-light)]/68 p-3 dark:border-[var(--ui-border-subtle-dark)] dark:bg-[var(--ui-surface-muted-dark)]/82">
+              <div className="overflow-x-auto pb-1">
+                <div className="min-w-[860px]">
+                  <div
+                    className="mb-2 grid gap-1 pl-8 text-[10px] text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]"
+                    style={{ gridTemplateColumns: `repeat(${heatmap.weekCount}, minmax(0, 1fr))` }}
+                  >
+                    {heatmap.monthMarkers.map((marker) => (
+                      <div key={`${marker.label}-${marker.column}`} style={{ gridColumn: `${marker.column + 1} / span 4` }}>
+                        {marker.label}
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex gap-2">
+                    <div className="grid w-6 shrink-0 gap-1 pt-0.5 text-[10px] text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">
+                      {weekNames.map((name) => (
+                        <div key={name} className="flex h-3 items-center justify-end">{name}</div>
+                      ))}
+                    </div>
+
+                    <div
+                      className="grid gap-1"
+                      style={{
+                        gridTemplateColumns: `repeat(${heatmap.weekCount}, minmax(0, 1fr))`,
+                        gridTemplateRows: 'repeat(7, minmax(0, 1fr))'
+                      }}
+                    >
+                      {heatmap.cells.map((cell) => {
+                        const mood = cell.summary ? getMoodMeta(cell.summary.moodScore) : null;
+                        const isSelected = cell.date === selectedDate;
+                        const isToday = cell.date === todayKey;
+
+                        return (
+                          <button
+                            key={cell.date}
+                            type="button"
+                            onClick={() => cell.inCurrentYear && setSelectedDate(cell.date)}
+                            className="size-3 rounded-[3px] transition-transform hover:scale-[1.08]"
+                            style={{
+                              gridColumn: `${Math.floor((parseDateKey(cell.date).getTime() - parseDateKey(heatmap.cells[0].date).getTime()) / MS_PER_DAY / 7) + 1}`,
+                              gridRow: `${cell.dayOfWeek + 1}`,
+                              backgroundColor: cell.summary ? mood?.color : 'color-mix(in srgb, var(--ui-surface-card-light) 35%, var(--ui-border-subtle-light) 65%)',
+                              opacity: cell.inCurrentYear ? (cell.summary ? 0.95 : 0.72) : 0.22,
+                              boxShadow: isSelected
+                                ? `0 0 0 2px ${mood?.displayColor || 'var(--ui-brand-primary)'}`
+                                : isToday
+                                  ? '0 0 0 1.5px var(--ui-border-strong-light)'
+                                  : 'none'
+                            }}
+                            title={cell.inCurrentYear ? `${cell.date}${cell.summary ? ` · ${mood?.label} · ${cell.summary.count}条记录` : ' · 暂无记录'}` : ''}
+                            disabled={!cell.inCurrentYear}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </section>
+
+        <section className="ui-card p-4">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <p className="ui-card-title mb-1">当天详情</p>
+              <h2 className="text-base font-extrabold">{selectedDateLabel} 的记录</h2>
+            </div>
+            <div className="rounded-full bg-[var(--ui-surface-muted-light)] px-3 py-1 text-xs font-semibold text-[var(--ui-text-secondary-light)] dark:bg-[var(--ui-surface-muted-dark)] dark:text-[var(--ui-text-secondary-dark)]">
+              {selectedSummary ? `${selectedSummary.count} 条记录` : '暂无记录'}
+            </div>
+          </div>
+
+          {selectedSummary && (
+            <div className="mb-4 rounded-[20px] bg-[var(--ui-surface-muted-light)]/78 px-4 py-3 dark:bg-[var(--ui-surface-muted-dark)]/80">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-[11px] font-semibold text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">当天主色</div>
+                  <div className="mt-1 text-lg font-extrabold" style={{ color: getMoodMeta(selectedSummary.moodScore).displayColor }}>
+                    {getMoodMeta(selectedSummary.moodScore).label}
+                  </div>
+                </div>
+                <div className="text-right text-sm text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">
+                  <div>平均情绪 {selectedSummary.averageMood.toFixed(1)}</div>
+                  <div>记录 {selectedSummary.count} 次</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {loadingDay ? (
+            <div className="ui-empty-state">
+              <p className="text-sm font-semibold">正在加载当天记录...</p>
+            </div>
           ) : dayEntries.length === 0 ? (
-            <div className="py-8 text-center text-gray-500">
-              <Icon name="history_edu" className="text-3xl mb-2" />
-              <p className="text-sm">这一天没有记录</p>
+            <div className="ui-empty-state">
+              <div className="mb-3 flex size-11 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <Icon name="calendar_month" size={22} />
+              </div>
+              <p className="text-sm font-semibold">这一天还没有留下记录</p>
+              <p className="page-subtitle mx-auto max-w-[16rem]">热力墙会先记住颜色，详细故事等你补上。</p>
             </div>
           ) : (
             <div className="flex flex-col gap-3">
               {dayEntries.map((entry) => {
                 const mood = getMoodMeta(entry.mood_score);
                 const activities = (entry.activities || []).map((item) => item.name).slice(0, 3).join(' · ');
+
                 return (
                   <article
                     key={entry.id}
-                    className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/40 p-3 cursor-pointer"
+                    className="cursor-pointer rounded-[20px] border border-[var(--ui-border-subtle-light)] bg-white/60 p-4 transition-transform hover:-translate-y-0.5 dark:border-[var(--ui-border-subtle-dark)] dark:bg-white/5"
                     onClick={() => navigate(`/entry/${entry.id}`)}
                   >
-                    <div className="flex items-center justify-between mb-1">
+                    <div className="mb-2 flex items-center justify-between gap-3">
                       <span className="text-sm font-semibold">{entry.time}</span>
-                      <span className="text-xs font-bold" style={{ color: mood.color }}>{entry.mood_score}分 {mood.label}</span>
+                      <span className="text-xs font-bold" style={{ color: mood.displayColor }}>{mood.label}</span>
                     </div>
-                    {activities && <p className="text-xs text-primary font-semibold mb-1">{activities}</p>}
-                    {entry.quick_note && <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2">{entry.quick_note}</p>}
+                    {activities && <p className="mb-1 text-xs font-semibold text-primary">{activities}</p>}
+                    {entry.quick_note && <p className="text-sm leading-6 text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">{entry.quick_note}</p>}
                   </article>
                 );
               })}

@@ -1,6 +1,13 @@
-export type MoodType = 'positive' | 'neutral' | 'negative';
+﻿export type MoodType = 'positive' | 'neutral' | 'negative';
 export type MoodScore = 1 | 2 | 3 | 4 | 5;
 export type CardTone = 'hero' | 'default' | 'subtle' | 'danger';
+
+export interface AudioClip {
+  id: string;
+  url: string;
+  durationSec: number;
+  createdAt: string;
+}
 
 export interface Entry {
   id: string;
@@ -25,6 +32,7 @@ export interface EntryV2 {
   full_note?: string;
   location?: string;
   images?: string[];
+  audio_clips?: AudioClip[];
   activity_ids: number[];
   activities?: ActivityItem[];
   created_at?: string;
@@ -72,6 +80,7 @@ export interface RecordDraftV2 {
   full_note: string;
   location: string;
   images: string[];
+  audio_clips: AudioClip[];
 }
 
 export interface ChartData {

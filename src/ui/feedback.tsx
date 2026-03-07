@@ -24,6 +24,7 @@ export interface PromptOptions {
   defaultValue?: string;
   confirmText?: string;
   cancelText?: string;
+  inputType?: 'text' | 'password';
 }
 
 interface FeedbackHandlers {
@@ -205,7 +206,7 @@ export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             </p>
             <input
               autoFocus
-              type="text"
+              type={promptState.options.inputType || 'text'}
               value={promptValue}
               onChange={(e) => setPromptValue(e.target.value)}
               placeholder={promptState.options.placeholder || ''}

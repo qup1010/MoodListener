@@ -1,10 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '../components/Icon';
 import { MoodFaceIcon } from '../components/MoodFaceIcon';
 import { deleteEntryV2, fetchEntriesV2, searchEntriesV2 } from '../services';
 import { EntryV2, MoodScore } from '../types';
-import { emptyStateCopy } from '../src/constants/copywriting';
 import { getMoodMeta, softenMoodColor } from '../src/constants/moodV2';
 import { confirmAction, showToast } from '../src/ui/feedback';
 
@@ -17,9 +16,9 @@ const formatRelativeDate = (dateText: string) => {
   const diffDays = Math.round((startOfTarget.getTime() - startOfToday.getTime()) / 86400000);
   const monthDayLabel = `${target.getMonth() + 1}月${target.getDate()}日`;
 
-  if (diffDays === 0) return `今天, ${monthDayLabel}`;
-  if (diffDays === -1) return `昨天, ${monthDayLabel}`;
-  if (diffDays === 1) return `明天, ${monthDayLabel}`;
+  if (diffDays === 0) return `今天 · ${monthDayLabel}`;
+  if (diffDays === -1) return `昨天 · ${monthDayLabel}`;
+  if (diffDays === 1) return `明天 · ${monthDayLabel}`;
   return `${target.getFullYear()}年${monthDayLabel}`;
 };
 
@@ -107,13 +106,13 @@ export const Timeline: React.FC = () => {
   };
 
   const filterText = useMemo(() => {
-    if (!filterMood) return '\u5168\u90e8\u60c5\u7eea';
+    if (!filterMood) return '全部情绪';
     const mood = getMoodMeta(filterMood);
     return mood.label;
   }, [filterMood]);
 
   const moodFilters: Array<{ label: string; value: MoodScore | null }> = [
-    { label: '\u5168\u90e8', value: null },
+    { label: '全部', value: null },
     ...([5, 4, 3, 2, 1] as MoodScore[]).map((score) => ({
       label: getMoodMeta(score).label,
       value: score
@@ -124,10 +123,9 @@ export const Timeline: React.FC = () => {
 
   return (
     <div className="page-shell flex min-h-screen flex-col animate-in fade-in slide-in-from-bottom-2">
-      <header className="page-header px-5 pt-6 pb-4">
+      <header className="page-header px-5 pt-4 pb-4">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h1 className="page-title">历史回顾</h1>
             <p className="page-subtitle">{entries.length} 条记录 · {filterText}</p>
           </div>
           <button
@@ -189,11 +187,11 @@ export const Timeline: React.FC = () => {
             <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-full bg-primary/10 text-primary">
               <Icon name={searchQuery ? 'search_off' : 'history_edu'} className="text-3xl" />
             </div>
-            <p className="text-base font-bold">{searchQuery ? emptyStateCopy.historySearchEmpty : emptyStateCopy.historyTitle}</p>
-            {!searchQuery && <p className="page-subtitle mx-auto max-w-[15rem]">{emptyStateCopy.historyBody}</p>}
+            <p className="text-base font-bold">{searchQuery ? '没有找到匹配记录' : '还没有记录'}</p>
+            {!searchQuery && <p className="page-subtitle mx-auto max-w-[15rem]">先记下一次心情，回头看会更有感觉。</p>}
             {!searchQuery && (
               <button onClick={() => navigate('/record')} className="ui-action-primary mx-auto mt-4 max-w-[220px]">
-                {emptyStateCopy.historyAction}
+                开始记录
               </button>
             )}
           </div>
@@ -234,7 +232,7 @@ export const Timeline: React.FC = () => {
                         <button
                           onClick={(event) => void handleDelete(event, Number(entry.id))}
                           className="flex size-9 shrink-0 items-center justify-center rounded-full border border-[var(--ui-border-subtle-light)] bg-white/58 text-[var(--ui-text-secondary-light)] transition-colors hover:text-red-500 dark:border-[var(--ui-border-subtle-dark)] dark:bg-white/5 dark:text-[var(--ui-text-secondary-dark)]"
-                          aria-label={'\u5220\u9664'}
+                          aria-label="删除"
                         >
                           <Icon name="more_horiz" size={18} />
                         </button>

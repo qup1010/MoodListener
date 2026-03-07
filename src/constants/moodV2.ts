@@ -1,7 +1,7 @@
 ﻿import { MoodScore } from '../../types';
 
 export type MoodIconKey = 'ecstatic' | 'happy' | 'okay' | 'upset' | 'awful';
-export type MoodIconPackId = 'playful' | 'pebble' | 'minimal' | 'sticker' | 'doodle' | 'tile';
+export type MoodIconPackId = 'playful' | 'solid' | 'pebble' | 'minimal' | 'sticker' | 'pixel' | 'clay' | 'animeSoft' | 'animeCool';
 
 export interface MoodLevelMeta {
   score: MoodScore;
@@ -26,18 +26,21 @@ export const DEFAULT_MOOD_ICON_PACK_ID: MoodIconPackId = 'playful';
 
 export const MOOD_ICON_PACKS: MoodIconPackMeta[] = [
   { id: 'playful', name: '糖块表情', description: '有点俏皮的方块脸，辨识度最高' },
-  { id: 'pebble', name: '圆泡泡', description: '圆润轻松，整体最柔和' },
+  { id: 'solid', name: '实心色块', description: '更饱满厚实的高饱和色彩' },
+  { id: 'pebble', name: '圆润泡泡', description: '圆润轻松，整体最柔和' },
   { id: 'minimal', name: '极简线稿', description: '更克制，留白更多' },
   { id: 'sticker', name: '贴纸小脸', description: '像小贴纸一样，轮廓更完整' },
-  { id: 'doodle', name: '涂鸦手记', description: '随手一画的感觉，轻松一点' },
-  { id: 'tile', name: '几何积木', description: '更利落的几何块面，结构感更强' }
+  { id: 'pixel', name: '复古像素', description: '回到红白机时代的复古游戏感' },
+  { id: 'clay', name: '质感膨胀', description: '模拟黏土与气球的立体解压质感' },
+  { id: 'animeSoft', name: '萌系软漫', description: '更圆润、更柔亮的二次元小头像气质' },
+  { id: 'animeCool', name: '清冷番剧', description: '更利落、更克制的冷静番剧风表情' }
 ];
 
 export const resolveMoodIconPackId = (value?: string | null): MoodIconPackId => {
   if (value === 'soft') return 'pebble';
-  if (value === 'scribble') return 'doodle';
-  if (value === 'bold') return 'tile';
-  if (value === 'playful' || value === 'pebble' || value === 'minimal' || value === 'sticker' || value === 'doodle' || value === 'tile') {
+  if (value === 'scribble' || value === 'doodle') return 'playful';
+  if (value === 'bold' || value === 'tile') return 'playful';
+  if (value === 'playful' || value === 'solid' || value === 'pebble' || value === 'minimal' || value === 'sticker' || value === 'pixel' || value === 'clay' || value === 'animeSoft' || value === 'animeCool') {
     return value;
   }
   return DEFAULT_MOOD_ICON_PACK_ID;
@@ -102,7 +105,7 @@ export const DEFAULT_ACTIVITY_GROUP_SEEDS: DefaultActivityGroupSeed[] = [
       { name: '焦虑', icon: 'thunderstorm' },
       { name: '生气', icon: 'volcano' },
       { name: '压力', icon: 'fitness_center' },
-      { name: '悲伤', icon: 'water_drop' },
+      { name: '难过', icon: 'water_drop' },
       { name: '绝望', icon: 'waves' }
     ]
   },

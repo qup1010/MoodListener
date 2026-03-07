@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Changed
+- Reworked local reminder scheduling so notifications are now planned as independent entries for the next 14 days instead of a single endlessly repeating reminder.
+- Refreshed Home and Stats insight copy to use more human-readable mood temperature language instead of exposing raw averages and deltas.
+- Softened overall UI typography and icon color usage so the app no longer leans on deep black for primary presentation.
+- Reduced top-level page chrome by removing large section titles from Home, History, Stats, and Settings while keeping the supporting subtitles.
+
+### Added
+- Added an intelligent local notification service that varies copy by time of day, recent low-mood periods, and Friday/weekend surprise cases.
+- Added smart do-not-disturb behavior that cancels the current day's remaining reminders after a record is actually saved.
+- Added foreground notification refresh so the app replenishes the next 14 days of reminders whenever it returns to the front.
+- Added a bottom-of-home Time Capsule card that can surface a random 4/5-point memory without interrupting the first-screen experience.
+- Added native audio journal support for a single long-press voice clip per record, including draft persistence, file storage, and detail-page playback.
+- Added a full-year emotion heatmap view inspired by contribution graphs for stronger annual review visibility.
+- Added two new anime-inspired icon packs and removed the older doodle pack from the selectable icon themes.
+
+### Fixed
+- Fixed reminder settings so saving notification preferences immediately re-schedules the future queue with the latest reminder times and enabled states.
+- Fixed legacy icon-pack fallback behavior so removed pack ids no longer break the icon selection UI.
+- Fixed several pages that had accumulated damaged text encoding by rewriting them with clean UTF-8 copy.
+
 ## [1.3.1] - 2026-03-06
 
 ### Changed

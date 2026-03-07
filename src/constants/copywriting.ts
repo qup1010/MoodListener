@@ -1,4 +1,4 @@
-﻿export interface QuoteItem {
+export interface QuoteItem {
   text: string;
   author: string;
 }
@@ -95,8 +95,8 @@ export const statsCopy = {
   summaryTitle: '最近状态',
   totalEntries: '总记录',
   streakDays: '连续天数',
-  averageMood7d: '7天均分',
-  averageMood30d: '30天均分',
+  averageMood7d: '近7天状态',
+  averageMood30d: '近30天状态',
   trendTitle: '记录趋势',
   distributionTitle: '5级情绪分布',
   activityTitle: '高频活动',

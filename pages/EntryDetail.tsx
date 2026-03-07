@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Icon } from '../components/Icon';
 import { MoodFaceIcon } from '../components/MoodFaceIcon';
@@ -45,7 +45,7 @@ export const EntryDetail: React.FC = () => {
       setActivityIds(entryData.activity_ids || []);
     } catch (error) {
       console.error('load entry detail failed:', error);
-      showToast('记录不存在或已被删除', 'error');
+      showToast('这条记录不存在或已被删除', 'error');
       navigate('/history', { replace: true });
     } finally {
       setLoading(false);
@@ -57,7 +57,7 @@ export const EntryDetail: React.FC = () => {
 
     const confirmed = await confirmAction({
       title: '删除记录',
-      message: '确定删除这条记录吗？此操作不可撤销。',
+      message: '确定删除这条记录吗？这个操作无法撤销。',
       confirmText: '删除',
       cancelText: '取消',
       danger: true
@@ -116,7 +116,7 @@ export const EntryDetail: React.FC = () => {
   if (loading) {
     return (
       <div className="page-shell min-h-screen flex items-center justify-center text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">
-        {'加载中...'}
+        加载中...
       </div>
     );
   }
@@ -137,7 +137,7 @@ export const EntryDetail: React.FC = () => {
           </h1>
           {editing ? (
             <button onClick={() => setEditing(false)} className="text-sm font-semibold text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">
-              {'取消'}
+              取消
             </button>
           ) : (
             <button onClick={() => setEditing(true)} className="size-10 rounded-full flex items-center justify-center bg-white/55 dark:bg-white/5 border border-[var(--ui-border-subtle-light)] dark:border-[var(--ui-border-subtle-dark)]">
@@ -152,7 +152,7 @@ export const EntryDetail: React.FC = () => {
           <div className="flex items-start justify-between gap-4">
             <div>
               <div className="text-sm font-semibold text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">{entry.date} {entry.time}</div>
-              <div className="mt-1 text-xs text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">{'情绪 '}{editing ? moodScore : entry.mood_score}{' / 5'}</div>
+              <div className="mt-1 text-xs text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">情绪 {editing ? moodScore : entry.mood_score} / 5</div>
             </div>
             <MoodFaceIcon mood={mood} size={56} />
           </div>
@@ -168,7 +168,7 @@ export const EntryDetail: React.FC = () => {
                     className="flex flex-col items-center gap-2 rounded-[16px] px-1 py-2 transition-all"
                     style={{
                       background: active ? 'rgba(255,255,255,0.72)' : 'transparent',
-                      boxShadow: active ? '0 12px 24px -22px rgba(24,22,18,0.35)' : 'none'
+                      boxShadow: active ? '0 12px 24px -22px rgba(79,71,61,0.28)' : 'none'
                     }}
                   >
                     <MoodFaceIcon mood={item} size={44} />
@@ -181,40 +181,40 @@ export const EntryDetail: React.FC = () => {
         </section>
 
         <section className="ui-card p-4">
-          <div className="text-sm font-bold mb-2">{'快速笔记'}</div>
+          <div className="mb-2 text-sm font-bold">快速笔记</div>
           {editing ? (
             <input
               type="text"
               value={quickNote}
               onChange={(event) => setQuickNote(event.target.value)}
-              className="w-full h-11 rounded-lg border border-gray-200 dark:border-gray-700 px-3 bg-white dark:bg-gray-800"
+              className="h-11 w-full rounded-lg border border-gray-200 bg-white px-3 dark:border-gray-700 dark:bg-gray-800"
             />
           ) : (
-            <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{entry.quick_note || '暂无'}</p>
+            <p className="whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-300">{entry.quick_note || '暂无'}</p>
           )}
         </section>
 
         <section className="ui-card p-4">
-          <div className="text-sm font-bold mb-2">{'完整注释'}</div>
+          <div className="mb-2 text-sm font-bold">完整笔记</div>
           {editing ? (
             <textarea
               value={fullNote}
               onChange={(event) => setFullNote(event.target.value)}
               rows={6}
-              className="w-full rounded-lg border border-gray-200 dark:border-gray-700 p-3 resize-none bg-white dark:bg-gray-800"
+              className="w-full resize-none rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800"
             />
           ) : (
-            <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{entry.full_note || '暂无'}</p>
+            <p className="whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-300">{entry.full_note || '暂无'}</p>
           )}
         </section>
 
         <section className="ui-card p-4">
-          <div className="text-sm font-bold mb-2">{'活动'}</div>
+          <div className="mb-2 text-sm font-bold">活动</div>
           {editing ? (
-            <div className="flex flex-col gap-3 max-h-[40vh] overflow-y-auto">
+            <div className="flex max-h-[40vh] flex-col gap-3 overflow-y-auto">
               {groups.map((group) => (
                 <div key={group.id}>
-                  <div className="text-xs font-bold text-gray-500 mb-2">{group.name}</div>
+                  <div className="mb-2 text-xs font-bold text-gray-500">{group.name}</div>
                   <div className="flex flex-wrap gap-2">
                     {group.activities.map((activity) => {
                       const selected = activityIds.includes(activity.id);
@@ -222,7 +222,7 @@ export const EntryDetail: React.FC = () => {
                         <button
                           key={activity.id}
                           onClick={() => toggleActivity(activity.id)}
-                          className={`px-3 py-1.5 rounded-full text-xs border ${selected ? 'bg-primary text-white border-primary' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'}`}
+                          className={`rounded-full border px-3 py-1.5 text-xs ${selected ? 'bg-primary text-white border-primary' : 'border-gray-200 text-gray-600 dark:border-gray-700 dark:text-gray-300'}`}
                         >
                           {activity.name}
                         </button>
@@ -233,33 +233,49 @@ export const EntryDetail: React.FC = () => {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-gray-700 dark:text-gray-300">{selectedActivities.length > 0 ? selectedActivities.join(' \u00b7 ') : '暂无'}</p>
+            <p className="text-sm text-gray-700 dark:text-gray-300">{selectedActivities.length > 0 ? selectedActivities.join(' · ') : '暂无'}</p>
           )}
         </section>
 
         <section className="ui-card p-4">
-          <div className="text-sm font-bold mb-2">{'位置'}</div>
+          <div className="mb-2 text-sm font-bold">位置</div>
           {editing ? (
             <input
               type="text"
               value={location}
               onChange={(event) => setLocation(event.target.value)}
-              className="w-full h-10 rounded-lg border border-gray-200 dark:border-gray-700 px-3 bg-white dark:bg-gray-800"
+              className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 dark:border-gray-700 dark:bg-gray-800"
             />
           ) : (
             <p className="text-sm text-gray-700 dark:text-gray-300">{entry.location || '暂无'}</p>
           )}
         </section>
+
+        {!!entry.audio_clips?.length && (
+          <section className="ui-card p-4">
+            <div className="mb-2 text-sm font-bold">声音片段</div>
+            <div className="flex flex-col gap-3">
+              {entry.audio_clips.map((clip) => (
+                <div key={clip.id} className="rounded-[18px] border border-[var(--ui-border-subtle-light)] bg-[var(--ui-surface-muted-light)]/72 p-3 dark:border-[var(--ui-border-subtle-dark)] dark:bg-[var(--ui-surface-muted-dark)]/76">
+                  <div className="mb-2 text-xs font-semibold text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">时长 {clip.durationSec} 秒</div>
+                  <audio controls className="w-full">
+                    <source src={clip.url} />
+                  </audio>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
       </main>
 
       <div className="px-4 pb-6">
         {editing ? (
-          <button onClick={() => void handleSave()} disabled={saving} className="w-full h-12 rounded-xl bg-primary text-white font-bold disabled:opacity-60">
+          <button onClick={() => void handleSave()} disabled={saving} className="h-12 w-full rounded-xl bg-primary font-bold text-white disabled:opacity-60">
             {saving ? '保存中...' : '保存修改'}
           </button>
         ) : (
-          <button onClick={() => void handleDelete()} className="w-full h-12 rounded-xl border border-red-400 text-red-500 font-bold">
-            {'删除记录'}
+          <button onClick={() => void handleDelete()} className="h-12 w-full rounded-xl border border-[var(--ui-border-subtle-light)] bg-[var(--ui-surface-card-light)] font-bold text-[var(--ui-text-secondary-light)] transition hover:brightness-95 dark:border-[var(--ui-border-subtle-dark)] dark:bg-[var(--ui-surface-card-dark)] dark:text-[var(--ui-text-secondary-dark)] dark:hover:brightness-110">
+            删除记录
           </button>
         )}
       </div>

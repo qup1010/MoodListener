@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '../components/Icon';
-import logo from '../src/assets/logo.png';
 
 const APP_VERSION = '1.3.1';
 
@@ -35,7 +34,7 @@ export const AboutInfo: React.FC = () => {
       <main className="flex flex-col gap-6 px-4 py-6">
         <section className="flex flex-col items-center py-8">
           <div className="mb-4 size-24 overflow-hidden rounded-[28%] bg-white ring-8 ring-gray-50/50 shadow-2xl shadow-primary/20 dark:ring-gray-800/50">
-            <img src={logo} alt="MoodListener" className="h-full w-full object-contain" />
+            <img src="icon.png" alt="MoodListener" className="h-full w-full object-contain" />
           </div>
           <h2 className="text-2xl font-extrabold text-gray-900 dark:text-white">MoodListener</h2>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">听见你的情绪</p>

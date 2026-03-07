@@ -1,443 +1,301 @@
-﻿/**
- * 通知设置页面
- * 配置每日提醒时间（支持多时段、多周期、智能文案）
- */
-import React, { useState, useEffect } from 'react';
+﻿import React, { useEffect, useState } from 'react';
+import { PermissionState } from '@capacitor/core';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '../components/Icon';
-import { fetchSettings, updateSettings, Reminder } from '../services';
-import { getRandomMessage } from '../src/constants/notificationMessages';
-import { PermissionState } from '@capacitor/core';
+import { Reminder, fetchSettings, updateSettings } from '../services';
+import { refreshNotifications, scheduleIntelligentNotifications } from '../src/services/notifications';
 import { confirmAction, showToast } from '../src/ui/feedback';
 
 export const NotificationSettings: React.FC = () => {
-    const navigate = useNavigate();
-    const [reminders, setReminders] = useState<Reminder[]>([]);
-    const [enabled, setEnabled] = useState(true);
-    const [loading, setLoading] = useState(true);
-    const [saving, setSaving] = useState(false);
+  const navigate = useNavigate();
+  const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [enabled, setEnabled] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [permissionStatus, setPermissionStatus] = useState<PermissionState>('prompt');
+  const [showModal, setShowModal] = useState(false);
+  const [editingReminder, setEditingReminder] = useState<Reminder | null>(null);
+  const [tempTime, setTempTime] = useState('20:00');
+  const [tempDays, setTempDays] = useState<number[]>([1, 2, 3, 4, 5, 6, 7]);
 
-    // Permission state
-    const [permissionStatus, setPermissionStatus] = useState<PermissionState>('prompt');
+  useEffect(() => {
+    void loadSettings();
+    void checkPermission();
+  }, []);
 
-    // Modal state
-    const [showModal, setShowModal] = useState(false);
-    const [editingReminder, setEditingReminder] = useState<Reminder | null>(null);
-    const [tempTime, setTempTime] = useState('20:00');
-    const [tempDays, setTempDays] = useState<number[]>([1, 2, 3, 4, 5, 6, 7]);
-
-    useEffect(() => {
-        loadSettings();
-        checkPermission();
-    }, []);
-
-    const checkPermission = async () => {
-        try {
-            const { LocalNotifications } = await import('@capacitor/local-notifications');
-            const status = await LocalNotifications.checkPermissions();
-            setPermissionStatus(status.display);
-        } catch (error) {
-            console.error('Check permission failed:', error);
-        }
-    };
-
-    const requestPermission = async () => {
-        try {
-            const { LocalNotifications } = await import('@capacitor/local-notifications');
-            const status = await LocalNotifications.requestPermissions();
-            setPermissionStatus(status.display);
-            if (status.display === 'granted') {
-                // 重新调度以确保生效
-                scheduleNotifications(enabled, reminders);
-            }
-        } catch (error) {
-            console.error('Request permission failed:', error);
-        }
-    };
-
-    const loadSettings = async () => {
-        try {
-            const settings = await fetchSettings();
-            // 兼容旧数据：是否有旧的 notification_time
-            const legacySettings = settings as any;
-            if (!settings.reminders && legacySettings.notification_time) {
-                const legacyReminder: Reminder = {
-                    id: 'default',
-                    time: legacySettings.notification_time,
-                    enabled: settings.notification_enabled,
-                    days: [1, 2, 3, 4, 5, 6, 7]
-                };
-                setReminders([legacyReminder]);
-            } else {
-                setReminders(settings.reminders || []);
-            }
-            setEnabled(settings.notification_enabled);
-        } catch (error) {
-            console.error('加载设置失败:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleSave = async () => {
-        setSaving(true);
-        try {
-            await updateSettings({
-                notification_enabled: enabled,
-                reminders: reminders
-            });
-
-            await scheduleNotifications(enabled, reminders);
-            navigate('/settings', { replace: true });
-        } catch (error) {
-            console.error('保存失败:', error);
-            showToast('保存失败，请重试', 'error');
-        } finally {
-            setSaving(false);
-        }
-    };
-
-
-    const scheduleNotifications = async (isEnabled: boolean, currentReminders: Reminder[]) => {
-        try {
-            const { LocalNotifications } = await import('@capacitor/local-notifications');
-
-            console.log('[Notification] Starting schedule process...');
-
-            // 取消所有现有通知
-            const pending = await LocalNotifications.getPending();
-            console.log(`[Notification] Found ${pending.notifications.length} pending notifications`);
-            if (pending.notifications.length > 0) {
-                await LocalNotifications.cancel(pending);
-                console.log('[Notification] Cancelled all pending notifications');
-            }
-
-            if (!isEnabled) {
-                console.log('[Notification] Notifications disabled, exiting');
-                return;
-            }
-
-            // 检查权限
-            const permission = await LocalNotifications.checkPermissions();
-            console.log('[Notification] Permission status:', permission.display);
-
-            if (permission.display !== 'granted') {
-                const request = await LocalNotifications.requestPermissions();
-                console.log('[Notification] Permission request result:', request.display);
-                if (request.display !== 'granted') {
-                    console.log('[Notification] Permission denied');
-                    return;
-                }
-            }
-
-            // 创建通知渠道（Android 8.0+ 必需）
-            try {
-                await LocalNotifications.createChannel({
-                    id: 'mood_reminders',
-                    name: '心情提醒',
-                    description: '定时提醒记录心情',
-                    importance: 4, // High importance
-                    visibility: 1,
-                    sound: 'default',
-                    vibration: true
-                });
-                console.log('[Notification] Channel created successfully');
-            } catch (channelError) {
-                console.log('[Notification] Channel creation error (may already exist):', channelError);
-            }
-
-            const notificationsToSchedule = [];
-            let idCounter = 100; // 起始 ID
-
-            for (const reminder of currentReminders) {
-                if (!reminder.enabled) continue;
-
-                const [hours, minutes] = reminder.time.split(':').map(Number);
-                console.log(`[Notification] Processing reminder: ${reminder.time}, days:`, reminder.days);
-
-                // 为每个启用的星期几创建一个单独的通知调度
-                for (const day of reminder.days) {
-                    // LocalNotifications 的 weekday 是 1 (周日) 到 7 (周六)
-                    // 我们的 days 是 1 (周一) 到 7 (周日)
-                    // 转换映射: 
-                    // Mon(1) -> 2, Tue(2) -> 3, ..., Sat(6) -> 7, Sun(7) -> 1
-                    const weekday = day === 7 ? 1 : day + 1;
-
-                    const message = getRandomMessage(hours);
-
-                    notificationsToSchedule.push({
-                        id: idCounter++,
-                        title: 'MoodListener',
-                        body: message,
-                        channelId: 'mood_reminders',
-                        schedule: {
-                            on: {
-                                hour: hours,
-                                minute: minutes,
-                                weekday: weekday
-                            },
-                            allowWhileIdle: true,
-                            repeats: true // 重要：设置为重复
-                        },
-                        sound: 'default',
-                        smallIcon: 'ic_stat_mood',
-                        actionTypeId: 'RECORD_ACTION',
-                        extra: {
-                            path: '/record'
-                        }
-                    });
-                }
-            }
-
-            console.log(`[Notification] Scheduling ${notificationsToSchedule.length} notifications`);
-
-            if (notificationsToSchedule.length > 0) {
-                await LocalNotifications.schedule({ notifications: notificationsToSchedule });
-                console.log('[Notification] Schedule successful!');
-
-                // 验证调度
-                const newPending = await LocalNotifications.getPending();
-                console.log(`[Notification] Verified: ${newPending.notifications.length} notifications scheduled`);
-                showToast(`已成功设置 ${newPending.notifications.length} 个提醒`, 'success', 2600);
-            } else {
-                console.log('[Notification] No notifications to schedule');
-                showToast('没有启用的提醒', 'info');
-            }
-
-        } catch (error) {
-            console.error('[Notification] Schedule failed:', error);
-            showToast(`设置通知失败: ${error}`, 'error', 2800);
-        }
-    };
-
-    const toggleReminder = (id: string) => {
-        setReminders(prev => prev.map(r => r.id === id ? { ...r, enabled: !r.enabled } : r));
-    };
-
-    const deleteReminder = async (id: string) => {
-        const ok = await confirmAction({
-            title: '删除提醒',
-            message: '确定要删除这个提醒吗？',
-            confirmText: '删除',
-            cancelText: '取消',
-            danger: true
-        });
-        if (!ok) return;
-        setReminders(prev => prev.filter(r => r.id !== id));
-    };
-
-    const openAddModal = () => {
-        setEditingReminder(null);
-        setTempTime('08:00');
-        setTempDays([1, 2, 3, 4, 5, 6, 7]);
-        setShowModal(true);
-    };
-
-    const openEditModal = (reminder: Reminder) => {
-        setEditingReminder(reminder);
-        setTempTime(reminder.time);
-        setTempDays(reminder.days);
-        setShowModal(true);
-    };
-
-    const saveModal = () => {
-        if (editingReminder) {
-            // Edit
-            setReminders(prev => prev.map(r => r.id === editingReminder.id ? { ...r, time: tempTime, days: tempDays } : r));
-        } else {
-            // Add
-            const newReminder: Reminder = {
-                id: Date.now().toString(),
-                time: tempTime,
-                enabled: true,
-                days: tempDays
-            };
-            setReminders(prev => [...prev, newReminder]);
-        }
-        setShowModal(false);
-    };
-
-    const toggleDay = (day: number) => {
-        if (tempDays.includes(day)) {
-            if (tempDays.length === 1) return; // 至少保留一天
-            setTempDays(prev => prev.filter(d => d !== day));
-        } else {
-            setTempDays(prev => [...prev, day].sort());
-        }
-    };
-
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center min-h-screen bg-background-light dark:bg-background-dark">
-                <span className="text-gray-500">加载中...</span>
-            </div>
-        );
+  const checkPermission = async () => {
+    try {
+      const { LocalNotifications } = await import('@capacitor/local-notifications');
+      const status = await LocalNotifications.checkPermissions();
+      setPermissionStatus(status.display);
+    } catch (error) {
+      console.error('Check permission failed:', error);
     }
+  };
 
+  const requestPermission = async () => {
+    try {
+      const { LocalNotifications } = await import('@capacitor/local-notifications');
+      const status = await LocalNotifications.requestPermissions();
+      setPermissionStatus(status.display);
+      if (status.display === 'granted') {
+        const count = await refreshNotifications();
+        if (count > 0) {
+          showToast(`已更新未来 ${count} 条提醒`, 'success', 2600);
+        }
+      }
+    } catch (error) {
+      console.error('Request permission failed:', error);
+    }
+  };
+
+  const loadSettings = async () => {
+    try {
+      const settings = await fetchSettings();
+      const legacySettings = settings as any;
+      if ((!settings.reminders || settings.reminders.length === 0) && legacySettings.notification_time) {
+        setReminders([{ id: 'default', time: legacySettings.notification_time, enabled: settings.notification_enabled, days: [1, 2, 3, 4, 5, 6, 7] }]);
+      } else {
+        setReminders(settings.reminders || []);
+      }
+      setEnabled(settings.notification_enabled);
+    } catch (error) {
+      console.error('加载设置失败:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await updateSettings({
+        notification_enabled: enabled,
+        reminders
+      });
+
+      const count = await scheduleIntelligentNotifications(enabled, reminders);
+      if (enabled) {
+        showToast(`已重排未来 ${count} 条提醒`, 'success', 2600);
+      } else {
+        showToast('提醒已关闭', 'success', 2200);
+      }
+      navigate('/settings', { replace: true });
+    } catch (error) {
+      console.error('保存失败:', error);
+      showToast('保存失败，请重试', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const toggleReminder = (id: string) => {
+    setReminders((prev) => prev.map((item) => item.id === id ? { ...item, enabled: !item.enabled } : item));
+  };
+
+  const deleteReminder = async (id: string) => {
+    const ok = await confirmAction({
+      title: '删除提醒',
+      message: '确定要删除这个提醒吗？',
+      confirmText: '删除',
+      cancelText: '取消',
+      danger: true
+    });
+    if (!ok) return;
+    setReminders((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  const openAddModal = () => {
+    setEditingReminder(null);
+    setTempTime('20:00');
+    setTempDays([1, 2, 3, 4, 5, 6, 7]);
+    setShowModal(true);
+  };
+
+  const openEditModal = (reminder: Reminder) => {
+    setEditingReminder(reminder);
+    setTempTime(reminder.time);
+    setTempDays(reminder.days);
+    setShowModal(true);
+  };
+
+  const saveModal = () => {
+    if (editingReminder) {
+      setReminders((prev) => prev.map((item) => item.id === editingReminder.id ? { ...item, time: tempTime, days: tempDays } : item));
+    } else {
+      setReminders((prev) => [...prev, { id: Date.now().toString(), time: tempTime, enabled: true, days: tempDays }]);
+    }
+    setShowModal(false);
+  };
+
+  const toggleDay = (day: number) => {
+    if (tempDays.includes(day)) {
+      if (tempDays.length === 1) return;
+      setTempDays((prev) => prev.filter((item) => item !== day));
+      return;
+    }
+    setTempDays((prev) => [...prev, day].sort());
+  };
+
+  if (loading) {
     return (
-        <div className="relative flex min-h-screen w-full flex-col bg-background-light dark:bg-background-dark font-display text-gray-900 dark:text-gray-100">
-            <header className="flex items-center justify-between p-4 sticky top-0 z-10 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-800/50">
-                <button onClick={() => navigate('/settings', { replace: true })} className="flex size-10 items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/10">
-                    <Icon name="arrow_back_ios_new" className="text-gray-900 dark:text-white" />
+      <div className="page-shell flex min-h-screen items-center justify-center text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">
+        加载中...
+      </div>
+    );
+  }
+
+  return (
+    <div className="page-shell relative flex min-h-screen w-full flex-col animate-in fade-in slide-in-from-bottom-2">
+      <header className="page-header px-4 py-3">
+        <div className="flex items-center gap-3">
+          <button onClick={() => navigate('/settings', { replace: true })} className="flex size-10 items-center justify-center rounded-full border border-[var(--ui-border-subtle-light)] bg-white/60 dark:border-[var(--ui-border-subtle-dark)] dark:bg-white/5 transition-transform active:scale-[0.98]">
+            <Icon name="arrow_back_ios_new" size={20} />
+          </button>
+          <div className="flex-1">
+            <h1 className="text-lg font-bold">定时提醒</h1>
+            <p className="page-subtitle mt-0.5">未来 14 天会动态更新，不再是重复不变的机械提醒。</p>
+          </div>
+        </div>
+      </header>
+
+      <main className="page-content pb-28">
+        {permissionStatus !== 'granted' && (
+          <div className="ui-card ui-card--danger mb-4 p-4 animate-in fade-in slide-in-from-top-4">
+            <div className="flex items-start gap-3">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-red-500/10 text-red-500">
+                <Icon name="notifications_off" />
+              </div>
+              <div className="flex-1 space-y-2">
+                <h3 className="font-bold text-red-600 dark:text-red-400">系统通知权限尚未开启</h3>
+                <p className="text-[11px] leading-5 text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">
+                  开启后，应用会动态生成未来 14 天的本地提醒，并根据心情状态做轻微变化，不会上传任何个人内容。
+                </p>
+                <button onClick={requestPermission} className="ui-action-secondary mt-2 w-full !min-h-[2.4rem] text-red-600 dark:text-red-400">
+                  去授权
                 </button>
-                <h1 className="text-lg font-bold">定时提醒</h1>
-                <button onClick={openAddModal} className="flex size-10 items-center justify-center rounded-full text-primary hover:bg-primary/10">
-                    <Icon name="add" className="text-2xl" />
-                </button>
-            </header>
+              </div>
+            </div>
+          </div>
+        )}
 
-            <main className="flex-1 px-4 py-6 flex flex-col gap-6 overflow-y-auto w-full">
+        <div className="mb-6 ui-card overflow-hidden">
+          <div className="flex cursor-pointer items-center justify-between p-4 transition-colors active:bg-black/5 dark:active:bg-white/5" onClick={() => setEnabled(!enabled)}>
+            <div className="flex items-center gap-3">
+              <div className="flex size-10 items-center justify-center rounded-2xl bg-orange-500/10 text-orange-500">
+                <Icon name="notifications_active" className="text-[22px]" />
+              </div>
+              <div>
+                <span className="block font-semibold">开启本地提醒</span>
+                <span className="block text-xs text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">打开后会动态规划未来 14 天提醒，并自动跳过当天已完成记录后的催促。</span>
+              </div>
+            </div>
+            <div className={`relative h-7 w-12 rounded-full transition-colors ${enabled ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-600'}`}>
+              <div className={`absolute left-1 top-1 size-5 rounded-full bg-white transition-transform ${enabled ? 'translate-x-5' : 'translate-x-0'}`} />
+            </div>
+          </div>
+        </div>
 
-                {/* 权限引导卡片 */}
-                {permissionStatus !== 'granted' && (
-                    <div className="p-4 rounded-2xl bg-primary/10 border border-primary/20 flex flex-col gap-3 animate-in fade-in slide-in-from-top-4">
-                        <div className="flex items-center gap-3">
-                            <Icon name="notifications_off" className="text-primary text-xl" />
-                            <h3 className="font-bold text-primary">开启通知权限</h3>
-                        </div>
-                        <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
-                            为了让你不错过每日的记录提醒，MoodListener 需要获取系统的通知权限。我们承诺仅用于发送你设定的心情提醒。
-                        </p>
-                        <button
-                            onClick={requestPermission}
-                            className="w-full py-2.5 bg-primary text-white rounded-xl text-sm font-bold shadow-md shadow-primary/20 active:scale-[0.98] transition-all"
-                        >
-                            允许通知
-                        </button>
-                    </div>
-                )}
-
-
-                {/* 总开关 */}
-                <div className="flex items-center justify-between p-4 bg-white dark:bg-card-dark rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
-                    <div className="flex items-center gap-3">
-                        <div className="size-10 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-orange-600 dark:text-orange-400">
-                            <Icon name="notifications_active" className="text-2xl" />
-                        </div>
-                        <div>
-                            <span className="font-semibold block">开启提醒</span>
-                            <span className="text-xs text-gray-500 block">不错过每一次记录</span>
-                        </div>
-                    </div>
-                    <div
-                        className={`relative w-12 h-7 rounded-full transition-colors cursor-pointer ${enabled ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-600'}`}
-                        onClick={() => setEnabled(!enabled)}
-                    >
-                        <div className={`absolute top-1 left-1 size-5 bg-white rounded-full transition-transform ${enabled ? 'translate-x-5' : 'translate-x-0'}`}></div>
-                    </div>
+        {enabled && (
+          <div className="animate-in fade-in slide-in-from-bottom-2">
+            <div className="mb-3 flex items-center justify-between px-1">
+              <div className="text-xs font-black uppercase tracking-[0.18em] text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">提醒时段</div>
+              <button onClick={openAddModal} className="flex size-7 items-center justify-center rounded-full bg-primary/10 text-primary transition-transform hover:scale-110 active:scale-95">
+                <Icon name="add" size={18} />
+              </button>
+            </div>
+            <div className="ui-card overflow-hidden">
+              {reminders.length === 0 ? (
+                <div className="p-6 text-center text-sm font-semibold text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">
+                  还没有设置任何提醒时间
                 </div>
-
-                {/* 提醒列表 */}
-                {enabled && (
-                    <div className="flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-4">
-                        <h3 className="text-sm font-bold text-gray-500 uppercase px-2">我的提醒</h3>
-                        {reminders.map(reminder => (
-                            <div key={reminder.id} className="flex items-center justify-between p-4 bg-white dark:bg-card-dark rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
-                                <div className="flex-1 cursor-pointer" onClick={() => openEditModal(reminder)}>
-                                    <div className="text-3xl font-bold font-mono tracking-tight text-primary">{reminder.time}</div>
-                                    <div className="flex gap-1 mt-2">
-                                        {[1, 2, 3, 4, 5, 6, 7].map(d => (
-                                            <span key={d} className={`text-[10px] w-5 h-5 flex items-center justify-center rounded-full ${reminder.days.includes(d) ? 'bg-primary/10 text-primary font-bold' : 'text-gray-300 dark:text-gray-600'}`}>
-                                                {['一', '二', '三', '四', '五', '六', '日'][d - 1]}
-                                            </span>
-                                        ))}
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-2 border-l border-gray-100 dark:border-gray-700 pl-4 ml-2">
-                                    <div
-                                        className={`relative w-10 h-6 rounded-full transition-colors cursor-pointer ${reminder.enabled ? 'bg-primary/80' : 'bg-gray-200 dark:bg-gray-700'}`}
-                                        onClick={() => toggleReminder(reminder.id)}
-                                    >
-                                        <div className={`absolute top-1 left-1 size-4 bg-white rounded-full transition-transform ${reminder.enabled ? 'translate-x-4' : 'translate-x-0'}`}></div>
-                                    </div>
-                                    <button onClick={() => void deleteReminder(reminder.id)} className="p-2 text-gray-400 hover:text-red-500 transition-colors">
-                                        <Icon name="delete" size={20} />
-                                    </button>
-                                </div>
-                            </div>
-                        ))}
-                        <button
-                            onClick={openAddModal}
-                            className="w-full py-3 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 text-gray-400 font-bold hover:border-primary hover:text-primary transition-colors flex items-center justify-center gap-2"
-                        >
-                            <Icon name="add" />
-                            添加新提醒
-                        </button>
+              ) : (
+                reminders.map((reminder, index) => (
+                  <div key={reminder.id} className={`flex items-center p-4 ${index !== reminders.length - 1 ? 'border-b border-[var(--ui-border-subtle-light)] dark:border-[var(--ui-border-subtle-dark)]' : ''}`}>
+                    <div className="min-w-0 flex-1 cursor-pointer pr-4" onClick={() => openEditModal(reminder)}>
+                      <div className="text-3xl font-black tracking-tight" style={{ color: reminder.enabled ? 'var(--ui-brand-primary)' : 'var(--ui-text-secondary-light)' }}>
+                        {reminder.time}
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {[1, 2, 3, 4, 5, 6, 7].map((day) => {
+                          const active = reminder.days.includes(day);
+                          return (
+                            <span key={day} className={`flex size-[1.1rem] items-center justify-center rounded-full text-[9px] font-bold ${active ? 'bg-[var(--ui-brand-primary)] text-white' : 'bg-[var(--ui-surface-muted-light)] dark:bg-[var(--ui-surface-muted-dark)] text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)] opacity-40'}`}>
+                              {['一', '二', '三', '四', '五', '六', '日'][day - 1]}
+                            </span>
+                          );
+                        })}
+                      </div>
                     </div>
-                )}
-            </main>
+                    <div className="flex shrink-0 items-center gap-3 border-l border-[var(--ui-border-subtle-light)] pl-4 dark:border-[var(--ui-border-subtle-dark)]">
+                      <div className={`relative h-6 w-11 cursor-pointer rounded-full transition-colors ${reminder.enabled ? 'bg-primary' : 'bg-[var(--ui-surface-muted-light)] border border-[var(--ui-border-subtle-light)] dark:bg-[var(--ui-surface-muted-dark)] dark:border-[var(--ui-border-subtle-dark)]'}`} onClick={() => toggleReminder(reminder.id)}>
+                        <div className={`absolute left-1 top-1 size-4 rounded-full bg-white shadow-sm transition-transform ${reminder.enabled ? 'translate-x-5' : 'translate-x-0'}`} />
+                      </div>
+                      <button onClick={() => void deleteReminder(reminder.id)} className="flex size-8 items-center justify-center rounded-full text-[var(--ui-text-secondary-light)] transition-colors hover:bg-red-500/10 hover:text-red-500 dark:text-[var(--ui-text-secondary-dark)]">
+                        <Icon name="delete" size={20} />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+      </main>
 
-            {/* 保存按钮 */}
-            <div className="p-4 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-t border-gray-100 dark:border-gray-800">
-                <button
-                    onClick={handleSave}
-                    disabled={saving}
-                    className="w-full h-12 bg-primary text-white rounded-xl font-bold shadow-lg shadow-primary/30 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-                >
-                    {saving ? '保存中...' : '保存设置'}
-                    {!saving && <Icon name="check" />}
-                </button>
+      <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-[var(--ui-border-subtle-light)] bg-[var(--ui-surface-card-light)]/95 pb-safe shadow-[0_-8px_32px_rgba(24,22,18,0.06)] backdrop-blur-md dark:border-[var(--ui-border-subtle-dark)] dark:bg-[var(--ui-surface-card-dark)]/94">
+        <div className="p-4 pt-4">
+          <button onClick={handleSave} disabled={saving} className="ui-action-primary">
+            {saving ? '正在重排未来提醒...' : '保存更改并生效'}
+            {!saving && <Icon name="check" size={20} />}
+          </button>
+        </div>
+      </div>
+
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm animate-in fade-in sm:items-center" onClick={() => setShowModal(false)}>
+          <div className="w-full max-w-md rounded-t-3xl bg-[var(--ui-surface-card-light)] p-6 shadow-[var(--ui-elevation-hero)] animate-in slide-in-from-bottom dark:bg-[var(--ui-surface-card-dark)] sm:rounded-3xl" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-6 text-center">
+              <h3 className="text-xl font-extrabold">{editingReminder ? '修改提醒时段' : '添加提醒时段'}</h3>
+              <p className="mt-1 text-xs text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">动态提醒会沿着这个时间，持续补齐未来 14 天。</p>
             </div>
 
-            {/* 编辑/添加 Modal */}
-            {showModal && (
-                <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in">
-                    <div className="w-full sm:w-[400px] bg-white dark:bg-gray-800 rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl animate-in slide-in-from-bottom">
-                        <h3 className="text-xl font-bold mb-6 text-center">{editingReminder ? '编辑提醒' : '添加提醒'}</h3>
+            <div className="mx-8 mb-8 flex justify-center rounded-2xl py-4 ui-card ui-card--subtle !border-none">
+              <input
+                type="time"
+                value={tempTime}
+                onChange={(e) => setTempTime(e.target.value)}
+                className="border-none bg-transparent text-[2.8rem] font-black text-[var(--ui-text-primary-light)] focus:outline-none focus:ring-0 dark:text-[var(--ui-text-primary-dark)]"
+                style={{ colorScheme: 'dark' }}
+              />
+            </div>
 
-                        <div className="flex justify-center mb-8">
-                            <input
-                                type="time"
-                                value={tempTime}
-                                onChange={(e) => setTempTime(e.target.value)}
-                                className="text-5xl font-bold bg-transparent border-none text-center focus:outline-none focus:ring-0 text-gray-900 dark:text-white"
-                                style={{ colorScheme: 'dark' }}
-                            />
-                        </div>
+            <div className="mb-8 px-2">
+              <label className="mb-3 block text-center text-xs font-bold uppercase text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">重复日</label>
+              <div className="grid grid-cols-7 gap-2">
+                {[1, 2, 3, 4, 5, 6, 7].map((day) => (
+                  <button
+                    key={day}
+                    onClick={() => toggleDay(day)}
+                    className={`mx-auto flex size-10 items-center justify-center rounded-full text-[13px] font-bold transition-all ${tempDays.includes(day) ? 'scale-110 bg-primary text-white shadow-sm' : 'bg-[var(--ui-surface-muted-light)] text-[var(--ui-text-secondary-light)] dark:bg-[var(--ui-surface-muted-dark)] dark:text-[var(--ui-text-secondary-dark)]'}`}
+                  >
+                    {['一', '二', '三', '四', '五', '六', '日'][day - 1]}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-                        <div className="mb-8">
-                            <label className="text-xs font-bold text-gray-500 uppercase mb-3 block text-center">重复周期</label>
-                            <div className="flex justify-between px-2 gap-1">
-                                {[1, 2, 3, 4, 5, 6, 7].map(d => (
-                                    <button
-                                        key={d}
-                                        onClick={() => toggleDay(d)}
-                                        className={`size-9 rounded-full flex items-center justify-center text-sm font-bold transition-all ${tempDays.includes(d)
-                                            ? 'bg-primary text-white shadow-md shadow-primary/30 scale-110'
-                                            : 'bg-gray-100 dark:bg-gray-700 text-gray-400'
-                                            }`}
-                                    >
-                                        {['一', '二', '三', '四', '五', '六', '日'][d - 1]}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div className="flex gap-4">
-                            <button
-                                onClick={() => setShowModal(false)}
-                                className="flex-1 h-12 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 font-bold"
-                            >
-                                取消
-                            </button>
-                            <button
-                                onClick={saveModal}
-                                className="flex-1 h-12 rounded-xl bg-primary text-white font-bold shadow-lg shadow-primary/30"
-                            >
-                                确定
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <div className="flex gap-3">
+              <button onClick={() => setShowModal(false)} className="ui-action-secondary flex-1 border-none bg-black/5 dark:bg-white/10">
+                取消
+              </button>
+              <button onClick={saveModal} className="ui-action-primary flex-1">
+                确定
+              </button>
+            </div>
+          </div>
         </div>
-    );
+      )}
+    </div>
+  );
 };
-
-
-
-
-
-
-
-

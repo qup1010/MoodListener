@@ -71,10 +71,10 @@ export const BASE_UI_TOKENS: UIThemeTokens = {
         heroDark: '#201a13'
     },
     text: {
-        primaryLight: '#181612',
-        primaryDark: '#f7f3ec',
-        secondaryLight: '#766b5a',
-        secondaryDark: '#b2a58f'
+        primaryLight: '#4f473d',
+        primaryDark: '#ece4d8',
+        secondaryLight: '#857969',
+        secondaryDark: '#beb29d'
     },
     border: {
         subtleLight: 'rgba(75, 59, 37, 0.10)',
@@ -87,8 +87,8 @@ export const BASE_UI_TOKENS: UIThemeTokens = {
         subtleDark: '#2a241c'
     },
     elevation: {
-        card: '0 20px 44px -30px rgba(24, 22, 18, 0.28)',
-        hero: '0 28px 60px -36px rgba(24, 22, 18, 0.34)'
+        card: '0 20px 44px -30px rgba(79, 71, 61, 0.18)',
+        hero: '0 28px 60px -36px rgba(79, 71, 61, 0.22)'
     },
     focus: {
         ring: 'rgba(194, 148, 62, 0.22)'
@@ -233,3 +233,4 @@ const applyThemeColors = (theme: typeof THEMES[0]) => {
     root.setProperty('--ui-border-strong-dark', `color-mix(in srgb, ${theme.hex} 30%, transparent)`);
     root.setProperty('--ui-focus-ring', `color-mix(in srgb, ${theme.hex} 24%, transparent)`);
 };
+

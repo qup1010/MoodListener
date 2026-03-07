@@ -3,7 +3,7 @@
  * 自动检测运行环境，在 Web 使用 localStorage，在原生使用 SQLite
  */
 
-import { Entry, MoodType, EntryV2, MoodScore, ActivityGroupWithItems, ActivityItem, RecentActivityItem, RecordDraftV2 } from '../types';
+import { AudioClip, Entry, MoodType, EntryV2, MoodScore, ActivityGroupWithItems, ActivityItem, RecentActivityItem, RecordDraftV2 } from '../types';
 import { Capacitor } from '@capacitor/core';
 import * as webStorage from '../src/storage/webStorage';
 import { showToast } from '../src/ui/feedback';
@@ -123,6 +123,8 @@ export interface SettingsData {
     amap_key?: string;
     weekly_insight_cache?: Record<string, WeeklyInsight>;
     mood_icon_pack_id?: import('../src/constants/moodV2').MoodIconPackId;
+    app_lock_enabled?: boolean;
+    app_lock_password_hash?: string | null;
 }
 
 export interface UpdateSettingsData {
@@ -134,6 +136,9 @@ export interface UpdateSettingsData {
     dark_mode_option?: 'light' | 'dark' | 'system';
     amap_key?: string;
     weekly_insight_cache?: Record<string, WeeklyInsight>;
+    mood_icon_pack_id?: import('../src/constants/moodV2').MoodIconPackId;
+    app_lock_enabled?: boolean;
+    app_lock_password_hash?: string | null;
 }
 
 export interface UserProfile {
@@ -441,6 +446,15 @@ export async function uploadImage(file: File): Promise<UploadResult> {
 
 
 
+
+export async function uploadAudio(blob: Blob, ext = 'webm'): Promise<UploadResult> {
+    if (!isNative) {
+        throw new Error('声音日志仅在 App 中可用');
+    }
+
+    await ensureNativeStorageReady();
+    return filesStorage.saveAudio(blob, ext);
+}
 export interface BackupCryptoMeta {
     kdf: 'PBKDF2';
     hash: 'SHA-256';
@@ -1086,6 +1100,7 @@ export interface EntryV2CreateData {
     full_note?: string;
     location?: string;
     images?: string[];
+    audio_clips?: AudioClip[];
     activity_ids?: number[];
 }
 
@@ -1097,6 +1112,7 @@ export interface EntryV2UpdateData {
     full_note?: string;
     location?: string;
     images?: string[];
+    audio_clips?: AudioClip[];
     activity_ids?: number[];
 }
 
@@ -1137,6 +1153,15 @@ export interface TrendPointV2 {
     day: string;
     entryCount: number;
     avgMood: number;
+}
+
+export interface TimeCapsuleCard {
+    entryId: string;
+    date: string;
+    moodScore: MoodScore;
+    moodLabel: string;
+    highlightText: string;
+    activitySummary?: string;
 }
 
 export interface StatsV2 {
@@ -1311,6 +1336,30 @@ export async function reorderActivities(groupId: number, activityIds: number[]):
     return webStorage.webReorderActivities(groupId, activityIds);
 }
 
+export async function fetchRandomTimeCapsule(): Promise<TimeCapsuleCard | null> {
+    const entries = await fetchEntriesV2({ moodScore: 4 });
+    const ecstaticEntries = await fetchEntriesV2({ moodScore: 5 });
+    const candidates = [...entries, ...ecstaticEntries];
+
+    if (candidates.length === 0) return null;
+
+    const selected = candidates[Math.floor(Math.random() * candidates.length)];
+    const highlightText = selected.quick_note?.trim()
+        || selected.full_note?.trim().slice(0, 80)
+        || (selected.activities || []).map((item) => item.name).slice(0, 3).join(' · ');
+
+    if (!highlightText) return null;
+
+    return {
+        entryId: selected.id,
+        date: selected.date,
+        moodScore: selected.mood_score,
+        moodLabel: selected.mood_score >= 5 ? '狂喜' : '开心',
+        highlightText,
+        activitySummary: (selected.activities || []).map((item) => item.name).slice(0, 3).join(' · ') || undefined
+    };
+}
+
 export async function fetchStatsV2(): Promise<StatsV2> {
     if (isNative) {
         await ensureNativeStorageReady();
@@ -1411,6 +1460,7 @@ const normalizeSnapshotV2 = (input: Partial<BackupPayloadV2>): BackupPayloadV2 =
             full_note: entry.full_note || '',
             location: entry.location || '',
             images: Array.isArray(entry.images) ? entry.images : [],
+            audio_clips: Array.isArray(entry.audio_clips) ? entry.audio_clips : [],
             activity_ids: Array.isArray(entry.activity_ids) ? entry.activity_ids : [],
             created_at: entry.created_at,
             updated_at: entry.updated_at
@@ -1443,7 +1493,10 @@ const normalizeSnapshotV2 = (input: Partial<BackupPayloadV2>): BackupPayloadV2 =
             amap_key: input.settings?.amap_key,
             weekly_insight_cache: input.settings?.weekly_insight_cache && typeof input.settings.weekly_insight_cache === 'object'
                 ? input.settings.weekly_insight_cache
-                : {}
+                : {},
+            mood_icon_pack_id: input.settings?.mood_icon_pack_id || 'playful',
+            app_lock_enabled: !!input.settings?.app_lock_enabled,
+            app_lock_password_hash: input.settings?.app_lock_password_hash || null
         },
         profile: {
             id: 1,
@@ -1483,7 +1536,7 @@ const persistImportedPayloadV2Native = async (payload: BackupPayloadV2): Promise
             await db.run(
                 `INSERT INTO entries_v2 (id, date, time, mood_score, quick_note, full_note, location, images, created_at, updated_at)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                [entryId, entry.date, entry.time, entry.mood_score, entry.quick_note || '', entry.full_note || '', entry.location || '', JSON.stringify(entry.images || []), entry.created_at || new Date().toISOString(), entry.updated_at || new Date().toISOString()]
+                [entryId, entry.date, entry.time, entry.mood_score, entry.quick_note || '', entry.full_note || '', entry.location || '', JSON.stringify(entry.images || []), JSON.stringify(entry.audio_clips || []), entry.created_at || new Date().toISOString(), entry.updated_at || new Date().toISOString()]
             );
 
             for (const activityId of entry.activity_ids || []) {
@@ -1492,7 +1545,7 @@ const persistImportedPayloadV2Native = async (payload: BackupPayloadV2): Promise
         }
 
         await db.run(
-            `UPDATE settings SET notification_enabled = ?, notification_time = ?, reminders = ?, theme_id = ?, dark_mode = ?, dark_mode_option = ?, amap_key = ?, weekly_insight_cache = ?, mood_icon_pack_id = ? WHERE id = 1`,
+                        `UPDATE settings SET notification_enabled = ?, notification_time = ?, reminders = ?, theme_id = ?, dark_mode = ?, dark_mode_option = ?, amap_key = ?, weekly_insight_cache = ?, mood_icon_pack_id = ?, app_lock_enabled = ?, app_lock_password_hash = ? WHERE id = 1`,
             [
                 payload.settings.notification_enabled ? 1 : 0,
                 payload.settings.notification_time || '20:00',
@@ -1501,7 +1554,10 @@ const persistImportedPayloadV2Native = async (payload: BackupPayloadV2): Promise
                 payload.settings.dark_mode ? 1 : 0,
                 payload.settings.dark_mode_option || 'system',
                 payload.settings.amap_key || null,
-                JSON.stringify(payload.settings.weekly_insight_cache || {})
+                JSON.stringify(payload.settings.weekly_insight_cache || {}),
+                payload.settings.mood_icon_pack_id || 'playful',
+                payload.settings.app_lock_enabled ? 1 : 0,
+                payload.settings.app_lock_password_hash || null
             ]
         );
 
@@ -1724,4 +1780,8 @@ export async function refreshWeeklyInsightV2(force = false, weekStart?: string):
 
     return insight;
 }
+
+
+
+
 

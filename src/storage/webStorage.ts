@@ -53,7 +53,8 @@ const DEFAULT_RECORD_DRAFT_V2: RecordDraftV2 = {
     quick_note: '',
     full_note: '',
     location: '',
-    images: []
+    images: [],
+    audio_clips: []
 };
 
 const buildDefaultActivitySeeds = () => {
@@ -408,7 +409,9 @@ export function webFetchSettings(): any {
         weekly_insight_cache: raw?.weekly_insight_cache && typeof raw.weekly_insight_cache === 'object'
             ? normalizeWeeklyInsightCache(raw.weekly_insight_cache)
             : {},
-        mood_icon_pack_id: raw?.mood_icon_pack_id || DEFAULT_SETTINGS.mood_icon_pack_id
+        mood_icon_pack_id: raw?.mood_icon_pack_id || DEFAULT_SETTINGS.mood_icon_pack_id,
+        app_lock_enabled: !!raw?.app_lock_enabled,
+        app_lock_password_hash: raw?.app_lock_password_hash || null
     };
 }
 
@@ -422,7 +425,9 @@ export function webUpdateSettings(data: any): any {
         weekly_insight_cache: data?.weekly_insight_cache && typeof data.weekly_insight_cache === 'object'
             ? data.weekly_insight_cache
             : settings.weekly_insight_cache,
-        mood_icon_pack_id: data?.mood_icon_pack_id || settings.mood_icon_pack_id
+        mood_icon_pack_id: data?.mood_icon_pack_id || settings.mood_icon_pack_id,
+        app_lock_enabled: data?.app_lock_enabled !== undefined ? !!data.app_lock_enabled : !!settings.app_lock_enabled,
+        app_lock_password_hash: data?.app_lock_password_hash !== undefined ? data.app_lock_password_hash : settings.app_lock_password_hash
     };
     setItem(KEYS.SETTINGS, updated);
     if (updated.theme_id) {
@@ -581,7 +586,9 @@ export function webImportSnapshot(snapshot: WebBackupSnapshot): void {
         id: 1,
         reminders: Array.isArray(snapshot.settings?.reminders) ? snapshot.settings.reminders : DEFAULT_SETTINGS.reminders,
         weekly_insight_cache: snapshot.settings?.weekly_insight_cache || {},
-        mood_icon_pack_id: snapshot.settings?.mood_icon_pack_id || DEFAULT_SETTINGS.mood_icon_pack_id
+        mood_icon_pack_id: snapshot.settings?.mood_icon_pack_id || DEFAULT_SETTINGS.mood_icon_pack_id,
+        app_lock_enabled: !!snapshot.settings?.app_lock_enabled,
+        app_lock_password_hash: snapshot.settings?.app_lock_password_hash || null
     };
 
     const profile = {
@@ -779,7 +786,8 @@ const enrichEntryV2 = (entry: any): any => {
         ...entry,
         activity_ids: ids,
         activities: selected,
-        images: Array.isArray(entry.images) ? entry.images : []
+        images: Array.isArray(entry.images) ? entry.images : [],
+        audio_clips: Array.isArray(entry.audio_clips) ? entry.audio_clips : []
     };
 };
 
@@ -865,6 +873,7 @@ export function webCreateEntryV2(data: any): any {
         full_note: data.full_note || '',
         location: data.location || '',
         images: Array.isArray(data.images) ? data.images : [],
+        audio_clips: Array.isArray(data.audio_clips) ? data.audio_clips : [],
         activity_ids: Array.isArray(data.activity_ids) ? data.activity_ids : [],
         created_at: now,
         updated_at: now
@@ -888,6 +897,7 @@ export function webUpdateEntryV2(id: number, data: any): any {
         mood_score: data.mood_score !== undefined ? Number(data.mood_score) : entries[index].mood_score,
         activity_ids: data.activity_ids !== undefined ? (Array.isArray(data.activity_ids) ? data.activity_ids : []) : entries[index].activity_ids,
         images: data.images !== undefined ? (Array.isArray(data.images) ? data.images : []) : entries[index].images,
+        audio_clips: data.audio_clips !== undefined ? (Array.isArray(data.audio_clips) ? data.audio_clips : []) : entries[index].audio_clips,
         updated_at: new Date().toISOString()
     };
 
@@ -914,7 +924,8 @@ export function webGetRecordDraftV2(): RecordDraftV2 {
         quick_note: draft.quick_note || '',
         full_note: draft.full_note || '',
         location: draft.location || '',
-        images: Array.isArray(draft.images) ? draft.images : []
+        images: Array.isArray(draft.images) ? draft.images : [],
+        audio_clips: Array.isArray(draft.audio_clips) ? draft.audio_clips : []
     };
 }
 
@@ -925,7 +936,8 @@ export function webSaveRecordDraftV2(draft: Partial<RecordDraftV2>): RecordDraft
         ...draft,
         mood_score: draft.mood_score !== undefined ? draft.mood_score : current.mood_score,
         activity_ids: draft.activity_ids !== undefined ? draft.activity_ids : current.activity_ids,
-        images: draft.images !== undefined ? draft.images : current.images
+        images: draft.images !== undefined ? draft.images : current.images,
+        audio_clips: draft.audio_clips !== undefined ? draft.audio_clips : current.audio_clips
     };
 
     setItem(KEYS.RECORD_DRAFT_V2, next);
@@ -1090,7 +1102,9 @@ export function webImportSnapshotV2(snapshot: WebBackupSnapshotV2): void {
         id: 1,
         reminders: Array.isArray(snapshot.settings?.reminders) ? snapshot.settings.reminders : DEFAULT_SETTINGS.reminders,
         weekly_insight_cache: snapshot.settings?.weekly_insight_cache || {},
-        mood_icon_pack_id: snapshot.settings?.mood_icon_pack_id || DEFAULT_SETTINGS.mood_icon_pack_id
+        mood_icon_pack_id: snapshot.settings?.mood_icon_pack_id || DEFAULT_SETTINGS.mood_icon_pack_id,
+        app_lock_enabled: !!snapshot.settings?.app_lock_enabled,
+        app_lock_password_hash: snapshot.settings?.app_lock_password_hash || null
     };
 
     const profile = {
@@ -1137,3 +1151,4 @@ export function webImportSnapshotV2(snapshot: WebBackupSnapshotV2): void {
         localStorage.setItem('mood_icon_pack_id', settings.mood_icon_pack_id);
     }
 }
+

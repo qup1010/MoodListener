@@ -1,6 +1,6 @@
-import { getDBConnection } from './database';
-import { deleteImage } from './files';
-import { ActivityItem, EntryV2, MoodScore } from '../../types';
+﻿import { getDBConnection } from './database';
+import { deleteAudio, deleteImage } from './files';
+import { ActivityItem, AudioClip, EntryV2, MoodScore } from '../../types';
 
 export interface EntryV2Filters {
     moodScore?: MoodScore;
@@ -18,6 +18,7 @@ export interface CreateEntryV2Data {
     full_note?: string;
     location?: string;
     images?: string[];
+    audio_clips?: AudioClip[];
     activity_ids?: number[];
 }
 
@@ -29,10 +30,11 @@ export interface UpdateEntryV2Data {
     full_note?: string;
     location?: string;
     images?: string[];
+    audio_clips?: AudioClip[];
     activity_ids?: number[];
 }
 
-const parseJsonArray = (value: string | null | undefined): string[] => {
+const parseJsonArray = (value: string | null | undefined): any[] => {
     if (!value) return [];
     try {
         const parsed = JSON.parse(value);
@@ -42,7 +44,7 @@ const parseJsonArray = (value: string | null | undefined): string[] => {
     }
 };
 
-const extractFilenameFromImageUrl = (url: string): string | null => {
+const extractFilenameFromUrl = (url: string): string | null => {
     if (!url || url.startsWith('data:')) return null;
 
     try {
@@ -56,10 +58,18 @@ const extractFilenameFromImageUrl = (url: string): string | null => {
 
 const removeImages = async (images: string[]) => {
     const filenames = images
-        .map(extractFilenameFromImageUrl)
+        .map(extractFilenameFromUrl)
         .filter((name): name is string => !!name);
 
     await Promise.allSettled(filenames.map((name) => deleteImage(name)));
+};
+
+const removeAudioClips = async (clips: AudioClip[]) => {
+    const filenames = clips
+        .map((clip) => extractFilenameFromUrl(clip.url))
+        .filter((name): name is string => !!name);
+
+    await Promise.allSettled(filenames.map((name) => deleteAudio(name)));
 };
 
 const mapRowToEntryV2 = (row: any): EntryV2 => {
@@ -71,7 +81,8 @@ const mapRowToEntryV2 = (row: any): EntryV2 => {
         quick_note: row.quick_note || '',
         full_note: row.full_note || '',
         location: row.location || '',
-        images: parseJsonArray(row.images),
+        images: parseJsonArray(row.images) as string[],
+        audio_clips: parseJsonArray(row.audio_clips) as AudioClip[],
         activity_ids: [],
         activities: [],
         created_at: row.created_at,
@@ -190,8 +201,8 @@ export async function fetchEntryV2(id: number): Promise<EntryV2> {
 export async function createEntryV2(data: CreateEntryV2Data): Promise<EntryV2> {
     const db = await getDBConnection();
     const result = await db.run(
-        `INSERT INTO entries_v2 (date, time, mood_score, quick_note, full_note, location, images)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO entries_v2 (date, time, mood_score, quick_note, full_note, location, images, audio_clips)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         [
             data.date,
             data.time,
@@ -199,7 +210,8 @@ export async function createEntryV2(data: CreateEntryV2Data): Promise<EntryV2> {
             data.quick_note || '',
             data.full_note || '',
             data.location || '',
-            JSON.stringify(data.images || [])
+            JSON.stringify(data.images || []),
+            JSON.stringify(data.audio_clips || [])
         ]
     );
 
@@ -226,6 +238,7 @@ export async function updateEntryV2(id: number, data: UpdateEntryV2Data): Promis
     if (data.full_note !== undefined) { setClauses.push('full_note = ?'); params.push(data.full_note); }
     if (data.location !== undefined) { setClauses.push('location = ?'); params.push(data.location); }
     if (data.images !== undefined) { setClauses.push('images = ?'); params.push(JSON.stringify(data.images)); }
+    if (data.audio_clips !== undefined) { setClauses.push('audio_clips = ?'); params.push(JSON.stringify(data.audio_clips)); }
 
     if (setClauses.length > 0) {
         setClauses.push('updated_at = datetime("now", "localtime")');
@@ -243,6 +256,12 @@ export async function updateEntryV2(id: number, data: UpdateEntryV2Data): Promis
         await removeImages(removed);
     }
 
+    if (data.audio_clips !== undefined) {
+        const nextAudioUrls = new Set((data.audio_clips || []).map((clip) => clip.url));
+        const removedAudio = (existing.audio_clips || []).filter((clip) => !nextAudioUrls.has(clip.url));
+        await removeAudioClips(removedAudio as AudioClip[]);
+    }
+
     return fetchEntryV2(id);
 }
 
@@ -252,6 +271,7 @@ export async function deleteEntryV2(id: number): Promise<void> {
 
     await db.run('DELETE FROM entries_v2 WHERE id = ?', [id]);
     await removeImages(existing.images || []);
+    await removeAudioClips((existing.audio_clips || []) as AudioClip[]);
 }
 
 export async function searchEntriesV2(query: string): Promise<EntryV2[]> {

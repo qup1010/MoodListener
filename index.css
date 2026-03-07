@@ -1,4 +1,4 @@
-@import "tailwindcss";
+﻿@import "tailwindcss";
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme inline {
@@ -28,18 +28,16 @@
   --ui-surface-muted-dark: #1f1b15;
   --ui-surface-hero-light: #f4e9d6;
   --ui-surface-hero-dark: #201a13;
-  --ui-text-primary-light: #181612;
-  --ui-text-primary-dark: #f7f3ec;
-  --ui-text-secondary-light: #766b5a;
-  --ui-text-secondary-dark: #b2a58f;
+  --ui-text-primary-light: #4f473d;
+  --ui-text-primary-dark: #ece4d8;
+  --ui-text-secondary-light: #857969;
+  --ui-text-secondary-dark: #beb29d;
   --ui-border-subtle-light: rgba(75, 59, 37, 0.10);
   --ui-border-subtle-dark: rgba(255, 242, 216, 0.10);
   --ui-border-strong-light: rgba(194, 148, 62, 0.22);
   --ui-border-strong-dark: rgba(194, 148, 62, 0.28);
   --ui-accent-subtle-light: #efe4d0;
   --ui-accent-subtle-dark: #2a241c;
-  --ui-elevation-card: 0 24px 50px -20px rgba(194, 148, 62, 0.12), 0 8px 16px -8px rgba(24, 22, 18, 0.04);
-  --ui-elevation-hero: 0 32px 70px -24px rgba(194, 148, 62, 0.16), 0 12px 24px -12px rgba(24, 22, 18, 0.06);
   --ui-elevation-card: 0 24px 50px -20px rgba(194, 148, 62, 0.12), 0 8px 16px -8px rgba(24, 22, 18, 0.04);
   --ui-elevation-hero: 0 32px 70px -24px rgba(194, 148, 62, 0.16), 0 12px 24px -12px rgba(24, 22, 18, 0.06);
   --ui-focus-ring: rgba(194, 148, 62, 0.22);
@@ -80,10 +78,10 @@
   --ui-surface-muted-dark: #1f1b15;
   --ui-surface-hero-light: #f4e9d6;
   --ui-surface-hero-dark: #201a13;
-  --ui-text-primary-light: #181612;
-  --ui-text-primary-dark: #f7f3ec;
-  --ui-text-secondary-light: #766b5a;
-  --ui-text-secondary-dark: #b2a58f;
+  --ui-text-primary-light: #4f473d;
+  --ui-text-primary-dark: #ece4d8;
+  --ui-text-secondary-light: #857969;
+  --ui-text-secondary-dark: #beb29d;
   --ui-border-subtle-light: rgba(75, 59, 37, 0.10);
   --ui-border-subtle-dark: rgba(255, 242, 216, 0.10);
   --ui-border-strong-light: rgba(194, 148, 62, 0.22);
@@ -183,6 +181,7 @@ textarea:focus-visible {
   -webkit-font-feature-settings: 'liga';
   font-feature-settings: 'liga';
   -webkit-font-smoothing: antialiased;
+  color: inherit;
 }
 
 @font-face {
@@ -337,7 +336,7 @@ textarea:focus-visible {
 
 .dark .page-header {
   border-bottom-color: var(--ui-border-subtle-dark);
-  background: color-mix(in srgb, var(--ui-surface-page-dark) 82%, black 18%);
+  background: color-mix(in srgb, var(--ui-surface-page-dark) 88%, var(--ui-accent-subtle-dark) 12%);
 }
 
 .page-content {
@@ -353,6 +352,10 @@ textarea:focus-visible {
   font-weight: 700;
   letter-spacing: -0.035em;
   color: color-mix(in srgb, var(--ui-text-primary-light) 74%, var(--ui-text-secondary-light) 26%);
+}
+
+.dark .page-title {
+  color: color-mix(in srgb, var(--ui-text-primary-dark) 74%, var(--ui-text-secondary-dark) 26%);
 }
 
 .page-subtitle {
@@ -527,7 +530,7 @@ textarea:focus-visible {
 }
 
 .dark .ui-input::placeholder {
-  color: color-mix(in srgb, var(--ui-text-secondary-dark) 84%, black 16%);
+  color: color-mix(in srgb, var(--ui-text-secondary-dark) 92%, var(--ui-text-primary-dark) 8%);
 }
 
 .ui-empty-state {

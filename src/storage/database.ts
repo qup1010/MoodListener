@@ -293,13 +293,31 @@ export const getDBConnection = async (): Promise<SQLiteDBConnection> => {
                 // column exists
             }
 
+            try {
+                await dbConnection.execute('ALTER TABLE settings ADD COLUMN app_lock_enabled INTEGER DEFAULT 0');
+            } catch {
+                // column exists
+            }
+
+            try {
+                await dbConnection.execute('ALTER TABLE settings ADD COLUMN app_lock_password_hash TEXT DEFAULT NULL');
+            } catch {
+                // column exists
+            }
+
+            try {
+                await dbConnection.execute("ALTER TABLE entries_v2 ADD COLUMN audio_clips TEXT DEFAULT '[]'");
+            } catch {
+                // column exists
+            }
+
             await dbConnection.execute(
                 'UPDATE settings SET mood_icon_pack_id = CASE ' +
                 'WHEN mood_icon_pack_id = "soft" THEN "pebble" ' +
-                'WHEN mood_icon_pack_id = "scribble" THEN "doodle" ' +
-                'WHEN mood_icon_pack_id = "bold" THEN "tile" ' +
+                'WHEN mood_icon_pack_id = "scribble" THEN "playful" WHEN mood_icon_pack_id = "doodle" THEN "playful" ' +
+                'WHEN mood_icon_pack_id = "bold" THEN "playful" WHEN mood_icon_pack_id = "tile" THEN "playful" ' +
                 'ELSE mood_icon_pack_id END ' +
-                'WHERE mood_icon_pack_id IN ("soft", "scribble", "bold")'
+                'WHERE mood_icon_pack_id IN ("soft", "scribble", "doodle", "bold", "tile")'
             );
 
             await dbConnection.execute(
@@ -308,7 +326,7 @@ export const getDBConnection = async (): Promise<SQLiteDBConnection> => {
             );
             await dbConnection.execute(
                 'UPDATE settings SET mood_icon_pack_id = "playful" ' +
-                'WHERE mood_icon_pack_id IS NULL OR mood_icon_pack_id NOT IN ("playful", "pebble", "minimal", "sticker", "doodle", "tile")'
+                'WHERE mood_icon_pack_id IS NULL OR mood_icon_pack_id NOT IN ("playful", "solid", "pebble", "minimal", "sticker", "pixel", "clay", "animeSoft", "animeCool")'
             );
 
             await seedLegacyTags(dbConnection);
@@ -336,3 +354,5 @@ export const closeConnection = async () => {
         }
     }
 };
+
+

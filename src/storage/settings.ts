@@ -18,6 +18,8 @@ export interface SettingsData {
     amap_key?: string;
     weekly_insight_cache: Record<string, any>;
     mood_icon_pack_id: import('../constants/moodV2').MoodIconPackId;
+    app_lock_enabled: boolean;
+    app_lock_password_hash?: string | null;
 }
 
 export interface UpdateSettingsData {
@@ -30,6 +32,8 @@ export interface UpdateSettingsData {
     amap_key?: string;
     weekly_insight_cache?: Record<string, any>;
     mood_icon_pack_id?: import('../constants/moodV2').MoodIconPackId;
+    app_lock_enabled?: boolean;
+    app_lock_password_hash?: string | null;
 }
 
 export interface UserProfile {
@@ -94,7 +98,9 @@ export async function fetchSettings(): Promise<SettingsData> {
             dark_mode_option: darkModeOption,
             amap_key: row.amap_key,
             weekly_insight_cache: weeklyInsightCache,
-            mood_icon_pack_id: row.mood_icon_pack_id || 'playful'
+            mood_icon_pack_id: row.mood_icon_pack_id || 'playful',
+            app_lock_enabled: !!row.app_lock_enabled,
+            app_lock_password_hash: row.app_lock_password_hash || null
         };
     }
 
@@ -107,7 +113,9 @@ export async function fetchSettings(): Promise<SettingsData> {
         dark_mode: false,
         dark_mode_option: 'system',
         weekly_insight_cache: {},
-        mood_icon_pack_id: 'playful'
+        mood_icon_pack_id: 'playful',
+        app_lock_enabled: false,
+        app_lock_password_hash: null
     };
 }
 
@@ -151,6 +159,14 @@ export async function updateSettings(data: UpdateSettingsData): Promise<Settings
     if (data.mood_icon_pack_id !== undefined) {
         setClauses.push('mood_icon_pack_id = ?');
         params.push(data.mood_icon_pack_id);
+    }
+    if (data.app_lock_enabled !== undefined) {
+        setClauses.push('app_lock_enabled = ?');
+        params.push(data.app_lock_enabled ? 1 : 0);
+    }
+    if (data.app_lock_password_hash !== undefined) {
+        setClauses.push('app_lock_password_hash = ?');
+        params.push(data.app_lock_password_hash);
     }
 
     if (setClauses.length > 0) {
