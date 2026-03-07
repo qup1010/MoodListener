@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.3] - 2026-03-07
+
+### Changed
+- Shortened reminder settings copy so the page explains the user-facing behavior without exposing internal scheduling details.
+- Reworked reminder time editing to happen inline on the page instead of using a bottom drawer, keeping the flow more direct.
+
+### Fixed
+- Fixed reminder settings text rendering after prior encoding regressions that produced escaped codepoints and question marks in the UI.
+- Fixed reminder saving so preference updates no longer block on notification re-planning and native scheduling failures fall back more safely.
+- Fixed first-time permission prompting so notification enabling and voice-note recording ask for the required system permissions at the point of use.
+
 ## [1.3.2] - 2026-03-07
 
 ### Changed

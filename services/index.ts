@@ -1415,7 +1415,7 @@ interface BackupPayloadV2 {
 }
 
 const BACKUP_VERSION_V2 = 2;
-const APP_VERSION_V2 = '1.3.2';
+const APP_VERSION_V2 = '1.3.3';
 
 const collectBackupPayloadV2 = async (): Promise<BackupPayloadV2> => {
     const [entries, groups, settings, profile] = await Promise.all([
