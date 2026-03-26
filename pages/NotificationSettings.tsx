@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { PermissionState } from '@capacitor/core';
+import { Capacitor, PermissionState } from '@capacitor/core';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '../components/Icon';
 import { Reminder, fetchSettings, updateSettings } from '../services';
@@ -8,6 +8,7 @@ import { confirmAction, showToast } from '../src/ui/feedback';
 
 const WEEKDAY_LABELS = ['\u4e00', '\u4e8c', '\u4e09', '\u56db', '\u4e94', '\u516d', '\u65e5'];
 const DEFAULT_DAYS = [1, 2, 3, 4, 5, 6, 7];
+const isNative = Capacitor.isNativePlatform();
 
 const copy = {
   loading: '\u52a0\u8f7d\u4e2d...',
@@ -38,6 +39,7 @@ const copy = {
   disabledSaved: '\u63d0\u9192\u5df2\u5173\u95ed',
   retryScheduling: '\u63d0\u9192\u5df2\u4fdd\u5b58',
   saveFailed: '\u4fdd\u5b58\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5',
+  noActiveReminder: '\u8bf7\u81f3\u5c11\u4fdd\u7559\u4e00\u4e2a\u5df2\u5f00\u542f\u7684\u63d0\u9192\u65f6\u95f4',
   noPermission: '\u672a\u83b7\u5f97\u901a\u77e5\u6743\u9650\uff0c\u65e0\u6cd5\u5f00\u542f\u5b9a\u65f6\u63d0\u9192',
   permissionFailed: '\u901a\u77e5\u6743\u9650\u7533\u8bf7\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5',
   futureUpdated: (count: number) => `\u5df2\u66f4\u65b0 ${count} \u6761\u63d0\u9192`,
@@ -65,9 +67,10 @@ export const NotificationSettings: React.FC = () => {
         event.stopPropagation();
         void onToggle();
       }}
-      className={`relative inline-flex h-7 w-12 items-center rounded-full p-1 transition-colors ${checked ? 'bg-primary' : 'border border-[var(--ui-border-subtle-light)] bg-[var(--ui-surface-muted-light)] dark:border-[var(--ui-border-subtle-dark)] dark:bg-[var(--ui-surface-muted-dark)]'}`}
+      className={`relative inline-flex h-7 w-12 items-center rounded-[11px] border-2 border-dashed p-1 transition-colors ${checked ? 'border-[var(--ui-border-strong-light)] bg-[var(--ui-surface-card-light)] dark:border-[var(--ui-border-strong-dark)] dark:bg-[var(--ui-surface-card-dark)]' : 'border-[var(--ui-border-subtle-light)] bg-[var(--ui-surface-muted-light)] dark:border-[var(--ui-border-subtle-dark)] dark:bg-[var(--ui-surface-muted-dark)]'}`}
+      style={{ transform: checked ? 'rotate(-1.4deg)' : 'rotate(0.7deg)' }}
     >
-      <span className={`block size-5 rounded-full bg-white shadow-sm transition-transform ${checked ? 'translate-x-5' : 'translate-x-0'}`} />
+      <span className={`block size-5 rounded-[8px] border border-[var(--ui-border-subtle-light)] bg-[var(--ui-surface-page-light)] shadow-[1px_1px_0_rgba(44,44,44,0.12)] transition-transform dark:border-[var(--ui-border-subtle-dark)] dark:bg-[var(--ui-surface-page-dark)] ${checked ? 'translate-x-5' : 'translate-x-0'}`} />
     </button>
   );
 
@@ -77,6 +80,11 @@ export const NotificationSettings: React.FC = () => {
   }, []);
 
   const checkPermission = async () => {
+    if (!isNative) {
+      setPermissionStatus('granted');
+      return 'granted' as PermissionState;
+    }
+
     try {
       const { LocalNotifications } = await import('@capacitor/local-notifications');
       const status = await LocalNotifications.checkPermissions();
@@ -89,6 +97,11 @@ export const NotificationSettings: React.FC = () => {
   };
 
   const requestPermission = async () => {
+    if (!isNative) {
+      setPermissionStatus('granted');
+      return true;
+    }
+
     try {
       const { LocalNotifications } = await import('@capacitor/local-notifications');
       const status = await LocalNotifications.requestPermissions();
@@ -149,10 +162,21 @@ export const NotificationSettings: React.FC = () => {
   };
 
   const saveEditor = () => {
+    const normalizedDays = [...tempDays].sort((a, b) => a - b);
+    const duplicate = reminders.some((item) => {
+      if (item.id === editingReminderId) return false;
+      return item.time === tempTime && item.days.length === normalizedDays.length && item.days.every((day, index) => day === normalizedDays[index]);
+    });
+
+    if (duplicate) {
+      showToast('这个提醒时间已经存在了', 'info', 2400);
+      return;
+    }
+
     if (editingReminderId) {
-      setReminders((prev) => prev.map((item) => item.id === editingReminderId ? { ...item, time: tempTime, days: tempDays } : item));
+      setReminders((prev) => prev.map((item) => item.id === editingReminderId ? { ...item, time: tempTime, days: normalizedDays } : item));
     } else {
-      setReminders((prev) => [...prev, { id: Date.now().toString(), time: tempTime, enabled: true, days: tempDays }]);
+      setReminders((prev) => [...prev, { id: Date.now().toString(), time: tempTime, enabled: true, days: normalizedDays }]);
     }
     closeEditor();
   };
@@ -202,6 +226,12 @@ export const NotificationSettings: React.FC = () => {
     setSaving(true);
 
     try {
+      if (enabled && reminders.every((item) => !item.enabled)) {
+        showToast(copy.noActiveReminder, 'info', 2400);
+        setSaving(false);
+        return;
+      }
+
       if (enabled && permissionStatus !== 'granted') {
         const granted = await requestPermission();
         if (!granted) {
@@ -253,7 +283,7 @@ export const NotificationSettings: React.FC = () => {
     <div className="page-shell relative flex min-h-screen w-full flex-col animate-in fade-in slide-in-from-bottom-2">
       <header className="page-header px-4 py-3">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/settings', { replace: true })} className="flex size-10 items-center justify-center rounded-full border border-[var(--ui-border-subtle-light)] bg-white/60 transition-transform active:scale-[0.98] dark:border-[var(--ui-border-subtle-dark)] dark:bg-white/5">
+          <button onClick={() => navigate('/settings', { replace: true })} className="sketch-icon-button flex size-10 items-center justify-center">
             <Icon name="arrow_back_ios_new" size={20} />
           </button>
           <div className="flex-1">
@@ -264,10 +294,10 @@ export const NotificationSettings: React.FC = () => {
       </header>
 
       <main className="page-content pb-32">
-        {permissionStatus !== 'granted' && (
+        {isNative && permissionStatus !== 'granted' && (
           <div className="ui-card mb-4 p-4">
             <div className="flex items-start gap-3">
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/12 text-primary">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-[12px] border-2 border-dashed border-[var(--ui-border-subtle-light)] bg-[var(--ui-surface-card-light)] text-primary shadow-[2px_2px_0_rgba(44,44,44,0.08)] dark:border-[var(--ui-border-subtle-dark)] dark:bg-[var(--ui-surface-card-dark)]">
                 <Icon name="notifications_active" />
               </div>
               <div className="flex-1 space-y-2">
@@ -313,12 +343,12 @@ export const NotificationSettings: React.FC = () => {
                     <div className="ui-card-title mb-1">{editingReminderId ? copy.editTime : copy.createTime}</div>
                     <p className="text-xs leading-5 text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">{copy.inlineHint}</p>
                   </div>
-                  <button onClick={closeEditor} className="flex size-9 items-center justify-center rounded-full bg-black/5 text-[var(--ui-text-secondary-light)] dark:bg-white/6 dark:text-[var(--ui-text-secondary-dark)]">
+                  <button onClick={closeEditor} className="sketch-icon-button flex size-9 items-center justify-center text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">
                     <Icon name="close" size={18} />
                   </button>
                 </div>
 
-                <div className="rounded-[22px] border border-[var(--ui-border-subtle-light)] bg-[var(--ui-surface-muted-light)] px-4 py-4 dark:border-[var(--ui-border-subtle-dark)] dark:bg-[var(--ui-surface-muted-dark)]">
+                <div className="rounded-[12px] border-2 border-dashed border-[var(--ui-border-subtle-light)] bg-[var(--ui-surface-muted-light)] px-4 py-4 shadow-[2px_2px_0_rgba(44,44,44,0.1)] dark:border-[var(--ui-border-subtle-dark)] dark:bg-[var(--ui-surface-muted-dark)]">
                   <label className="ui-field-label">{copy.timeLabel}</label>
                   <input
                     type="time"
@@ -336,7 +366,7 @@ export const NotificationSettings: React.FC = () => {
                         key={day}
                         type="button"
                         onClick={() => toggleDay(day)}
-                        className={`flex h-10 items-center justify-center rounded-full text-[13px] font-bold transition-all ${tempDays.includes(day) ? 'bg-primary text-white shadow-sm' : 'bg-[var(--ui-surface-muted-light)] text-[var(--ui-text-secondary-light)] dark:bg-[var(--ui-surface-muted-dark)] dark:text-[var(--ui-text-secondary-dark)]'}`}
+                        className={`sketch-chip h-10 justify-center px-0 ${tempDays.includes(day) ? 'sketch-chip--active' : ''}`}
                       >
                         {WEEKDAY_LABELS[day - 1]}
                       </button>
@@ -345,7 +375,7 @@ export const NotificationSettings: React.FC = () => {
                 </div>
 
                 <div className="mt-5 flex gap-3">
-                  <button onClick={closeEditor} className="ui-action-secondary flex-1 border-none bg-black/5 dark:bg-white/10">{copy.cancel}</button>
+                  <button onClick={closeEditor} className="ui-action-secondary flex-1">{copy.cancel}</button>
                   <button onClick={saveEditor} className="ui-action-primary flex-1">{copy.saveThisTime}</button>
                 </div>
               </div>
@@ -365,7 +395,7 @@ export const NotificationSettings: React.FC = () => {
                         {DEFAULT_DAYS.map((day) => {
                           const active = reminder.days.includes(day);
                           return (
-                            <span key={day} className={`flex size-[1.1rem] items-center justify-center rounded-full text-[9px] font-bold ${active ? 'bg-[var(--ui-brand-primary)] text-white' : 'bg-[var(--ui-surface-muted-light)] text-[var(--ui-text-secondary-light)] opacity-45 dark:bg-[var(--ui-surface-muted-dark)] dark:text-[var(--ui-text-secondary-dark)]'}`}>
+                            <span key={day} className={`sketch-chip !min-h-0 !px-0 !py-0 flex size-[1.4rem] items-center justify-center text-[9px] font-bold ${active ? 'sketch-chip--active' : 'opacity-55'}`}>
                               {WEEKDAY_LABELS[day - 1]}
                             </span>
                           );
@@ -374,7 +404,7 @@ export const NotificationSettings: React.FC = () => {
                     </button>
                     <div className="flex shrink-0 items-center gap-3 border-l border-[var(--ui-border-subtle-light)] pl-4 dark:border-[var(--ui-border-subtle-dark)]">
                       {renderSwitch(reminder.enabled, () => toggleReminder(reminder.id))}
-                      <button onClick={() => void deleteReminder(reminder.id)} className="flex size-8 items-center justify-center rounded-full text-primary transition-colors hover:bg-primary/10 dark:text-primary">
+                      <button onClick={() => void deleteReminder(reminder.id)} className="sketch-icon-button flex size-8 items-center justify-center text-[var(--ui-brand-primary-strong)] dark:text-[var(--ui-brand-primary)]">
                         <Icon name="delete" size={18} className="shrink-0" />
                       </button>
                     </div>
@@ -386,7 +416,7 @@ export const NotificationSettings: React.FC = () => {
         )}
       </main>
 
-      <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-[var(--ui-border-subtle-light)] bg-[var(--ui-surface-card-light)]/95 pb-safe shadow-[0_-8px_32px_rgba(24,22,18,0.06)] backdrop-blur-md dark:border-[var(--ui-border-subtle-dark)] dark:bg-[var(--ui-surface-card-dark)]/94">
+      <div className="fixed bottom-0 left-0 right-0 z-20 border-t-2 border-dashed border-[var(--ui-border-subtle-light)] bg-[var(--ui-surface-card-light)] pb-safe dark:border-[var(--ui-border-subtle-dark)] dark:bg-[var(--ui-surface-card-dark)]">
         <div className="p-4 pt-4">
           <button onClick={handleSave} disabled={saving} className="ui-action-primary">
             {saving ? copy.savingButton : copy.saveButton}

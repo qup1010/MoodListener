@@ -52,8 +52,14 @@ export const Stats: React.FC = () => {
 
   if (!stats) {
     return (
-      <div className="page-shell min-h-screen flex items-center justify-center text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">
-        数据加载失败
+      <div className="page-shell min-h-screen flex items-center justify-center px-4">
+        <div className="ui-card ui-card--scrapbook ui-card--note w-full max-w-sm p-5 text-center">
+          <div className="mb-3 text-sm font-semibold text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">数据加载失败</div>
+          <button onClick={() => void loadStats()} className="ui-action-primary">
+            重新加载
+            <Icon name="refresh" size={18} />
+          </button>
+        </div>
       </div>
     );
   }
@@ -66,18 +72,18 @@ export const Stats: React.FC = () => {
       <header className="page-header px-4 py-3">
         <div className="flex items-center justify-between gap-3">
           <p className="page-subtitle">看看最近的心情，慢慢发现自己的节奏。</p>
-          <button onClick={() => void loadStats()} className="flex size-10 items-center justify-center rounded-full border border-[var(--ui-border-subtle-light)] bg-white/60 dark:border-[var(--ui-border-subtle-dark)] dark:bg-white/5">
+          <button onClick={() => void loadStats()} className="sketch-icon-button flex size-10 items-center justify-center">
             <Icon name="refresh" />
           </button>
         </div>
       </header>
 
       <main className="page-content overflow-y-auto pb-8">
-        <section className="ui-card ui-card--hero p-4">
+        <section className="ui-card ui-card--hero ui-card--scrapbook ui-card--note p-4">
           <div className="mb-4 flex items-start justify-between gap-3">
             <div>
-              <p className="ui-card-title mb-1">最近状态</p>
-              <h2 className="text-lg font-extrabold">最近 30 天的记录节奏</h2>
+              <p className="scrapbook-stamp mb-2">最近状态</p>
+              <h2 className="scrapbook-title text-lg font-extrabold">最近 30 天的记录节奏</h2>
             </div>
             <div className="ui-icon-chip size-10">
               <Icon name="insights" size={20} />
@@ -85,41 +91,41 @@ export const Stats: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <div className="ui-kpi">
+            <div className="ui-kpi ui-kpi--scrapbook">
               <div className="mb-1 text-[11px] font-semibold text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">总记录</div>
               <div className="text-xl font-extrabold">{stats.total_entries}</div>
             </div>
-            <div className="ui-kpi">
+            <div className="ui-kpi ui-kpi--scrapbook">
               <div className="mb-1 text-[11px] font-semibold text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">连续天数</div>
               <div className="text-xl font-extrabold">{stats.streak_days}</div>
             </div>
-            <div className="ui-kpi">
+            <div className="ui-kpi ui-kpi--scrapbook">
               <div className="mb-1 text-[11px] font-semibold text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">近7天情绪温度</div>
               <div className="text-base font-extrabold leading-6 text-primary">{stats.average_mood_7d ? describeMoodTemperature(stats.average_mood_7d) : '-'}</div>
             </div>
-            <div className="ui-kpi">
+            <div className="ui-kpi ui-kpi--scrapbook">
               <div className="mb-1 text-[11px] font-semibold text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">近30天情绪温度</div>
               <div className="text-base font-extrabold leading-6">{stats.average_mood_30d ? describeMoodTemperature(stats.average_mood_30d) : '-'}</div>
             </div>
           </div>
         </section>
 
-        <section className="ui-card p-4">
+        <section className="ui-card ui-card--scrapbook ui-card--ledger p-4">
           <div className="mb-3 flex items-center justify-between">
             <div>
-              <p className="ui-card-title mb-1">趋势</p>
-              <h2 className="text-base font-extrabold">记录趋势</h2>
+              <p className="scrapbook-stamp mb-2">趋势</p>
+              <h2 className="scrapbook-title text-base font-extrabold">记录趋势</h2>
             </div>
-            <div className="flex gap-1 rounded-2xl bg-[var(--ui-surface-muted-light)] p-1 dark:bg-[var(--ui-surface-muted-dark)]">
+            <div className="sketch-segment">
               <button
                 onClick={() => setTrendMode('7d')}
-                className={`rounded-xl px-3 py-1.5 text-xs font-semibold ${trendMode === '7d' ? 'bg-white text-primary shadow-sm dark:bg-white/10' : 'text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]'}`}
+                className={`sketch-segment-button ${trendMode === '7d' ? 'sketch-segment-button--active' : ''}`}
               >
                 7天
               </button>
               <button
                 onClick={() => setTrendMode('30d')}
-                className={`rounded-xl px-3 py-1.5 text-xs font-semibold ${trendMode === '30d' ? 'bg-white text-primary shadow-sm dark:bg-white/10' : 'text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]'}`}
+                className={`sketch-segment-button ${trendMode === '30d' ? 'sketch-segment-button--active' : ''}`}
               >
                 30天
               </button>
@@ -139,12 +145,11 @@ export const Stats: React.FC = () => {
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={trendData} margin={{ top: 12, right: 8, left: -18, bottom: 6 }}>
                   <defs>
-                    <linearGradient id="trendFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="rgb(var(--app-primary))" stopOpacity={0.28} />
-                      <stop offset="95%" stopColor="rgb(var(--app-primary))" stopOpacity={0} />
-                    </linearGradient>
+                    <pattern id="trendFill" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(35)">
+                      <line x1="0" y1="0" x2="0" y2="8" stroke="rgb(var(--app-primary))" strokeOpacity="0.14" strokeWidth="1" />
+                    </pattern>
                   </defs>
-                  <CartesianGrid vertical={false} stroke="var(--ui-border-subtle-light)" strokeDasharray="3 3" />
+                  <CartesianGrid vertical={false} stroke="var(--ui-border-subtle-light)" strokeDasharray="4 4" />
                   <XAxis
                     dataKey="day"
                     tickLine={false}
@@ -161,13 +166,13 @@ export const Stats: React.FC = () => {
                     width={28}
                   />
                   <Tooltip
-                    cursor={{ stroke: 'rgb(var(--app-primary))', strokeOpacity: 0.18, strokeWidth: 1 }}
+                    cursor={{ stroke: 'rgb(var(--app-primary))', strokeOpacity: 0.22, strokeWidth: 1, strokeDasharray: '4 4' }}
                     contentStyle={{
-                      borderRadius: 16,
-                      border: '1px solid var(--ui-border-subtle-light)',
-                      background: 'color-mix(in srgb, var(--ui-surface-card-light) 92%, white 8%)',
+                      borderRadius: 12,
+                      border: '2px dashed var(--ui-border-subtle-light)',
+                      background: 'var(--ui-surface-card-light)',
                       color: 'var(--ui-text-primary-light)',
-                      boxShadow: 'var(--ui-elevation-card)'
+                      boxShadow: '3px 3px 0 rgba(44,44,44,0.18)'
                     }}
                     labelStyle={{ color: 'var(--ui-text-secondary-light)', fontSize: 12, marginBottom: 4 }}                    formatter={(value: number) => [`${value} 条`, '记录数']}
                     labelFormatter={(label: string, payload) => payload?.[0]?.payload?.fullDay || label}
@@ -176,9 +181,10 @@ export const Stats: React.FC = () => {
                     dataKey="value"
                     type="monotone"
                     stroke="rgb(var(--app-primary))"
-                    strokeWidth={2.4}
+                    strokeWidth={2.2}
+                    strokeDasharray="5 2"
                     fill="url(#trendFill)"
-                    activeDot={{ r: 4, fill: 'rgb(var(--app-primary))', stroke: 'white', strokeWidth: 2 }}
+                    activeDot={{ r: 4, fill: 'rgb(var(--app-primary))', stroke: 'var(--ui-surface-card-light)', strokeWidth: 2 }}
                   />
                 </AreaChart>
               </ResponsiveContainer>
@@ -186,9 +192,9 @@ export const Stats: React.FC = () => {
           )}
         </section>
 
-        <section className="ui-card p-4">
-          <p className="ui-card-title mb-1">分布</p>
-          <h2 className="mb-4 text-base font-extrabold">5级情绪分布</h2>
+        <section className="ui-card ui-card--scrapbook p-4">
+          <p className="scrapbook-stamp mb-2">分布</p>
+          <h2 className="scrapbook-title mb-4 text-base font-extrabold">5级情绪分布</h2>
           {stats.total_entries === 0 ? (
             <div className="ui-empty-state">
               <p className="text-sm font-semibold">还没有足够的记录</p>
@@ -199,7 +205,7 @@ export const Stats: React.FC = () => {
               {stats.mood_distribution.map((item) => {
                 const mood = getMoodMeta(item.score);
                 return (
-                  <div key={item.score} className="flex items-center gap-3 rounded-[20px] bg-[var(--ui-surface-muted-light)]/72 px-3 py-2 dark:bg-[var(--ui-surface-muted-dark)]/80">
+                  <div key={item.score} className="sketch-note sketch-note--paper flex items-center gap-3 px-3 py-2">
                     <div className="flex w-[5.5rem] items-center gap-2">
                       <MoodFaceIcon mood={mood} size={34} />
                       <span className="text-xs font-semibold" style={{ color: mood.displayColor }}>{mood.label}</span>
@@ -215,9 +221,9 @@ export const Stats: React.FC = () => {
           )}
         </section>
 
-        <section className="ui-card ui-card--subtle p-4">
-          <p className="ui-card-title mb-1">活动</p>
-          <h2 className="mb-4 text-base font-extrabold">高频活动</h2>
+        <section className="ui-card ui-card--subtle ui-card--scrapbook ui-card--note p-4">
+          <p className="scrapbook-stamp mb-2">活动</p>
+          <h2 className="scrapbook-title mb-4 text-base font-extrabold">高频活动</h2>
           {stats.top_activities.length === 0 ? (
             <div className="ui-empty-state">
               <p className="text-sm font-semibold">先记录几次活动，常见触发因素会出现在这里。</p>
@@ -225,7 +231,7 @@ export const Stats: React.FC = () => {
           ) : (
             <div className="flex flex-col gap-3">
               {stats.top_activities.map((item, index) => (
-                <div key={item.activity_id} className="flex items-center justify-between gap-3 rounded-2xl border border-[var(--ui-border-subtle-light)] bg-white/55 px-3 py-3 dark:border-[var(--ui-border-subtle-dark)] dark:bg-white/5">
+                <div key={item.activity_id} className="sketch-note sketch-note--paper flex items-center justify-between gap-3 px-3 py-3">
                   <div className="flex min-w-0 items-center gap-3">
                     <div className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-sm font-black text-primary">{index + 1}</div>
                     <span className="truncate font-medium">{item.name}</span>

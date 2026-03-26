@@ -4,7 +4,7 @@ import { getIntelligentMessage } from '../constants/notificationMessages';
 import { toLocalDateString } from '../utils/date';
 
 const CHANNEL_ID = 'mood_reminders';
-const SCHEDULE_DAYS = 14;
+const SCHEDULE_DAYS = 60;
 const NOTIFICATION_BASE_ID = 500000;
 const NATIVE_TIMEOUT_MS = 4500;
 
@@ -30,9 +30,8 @@ const reminderMatchesDate = (reminder: Reminder, date: Date) => {
   return reminder.enabled && reminder.days.includes(reminderDay);
 };
 
-const buildNotificationId = (dateKey: string, reminderIndex: number) => {
-  const compact = Number(dateKey.replace(/-/g, ''));
-  return NOTIFICATION_BASE_ID + compact * 10 + reminderIndex;
+const buildNotificationId = (dayOffset: number, reminderIndex: number) => {
+  return NOTIFICATION_BASE_ID + dayOffset * 1000 + reminderIndex;
 };
 
 const getRecentMoodAverage = async (): Promise<number | null> => {
@@ -43,11 +42,12 @@ const getRecentMoodAverage = async (): Promise<number | null> => {
   return Number(avg.toFixed(2));
 };
 
-const ensurePermissionAndChannel = async () => {
+const ensurePermissionAndChannel = async (requestPermission = true) => {
   const { LocalNotifications } = await import('@capacitor/local-notifications');
   const permission = await withTimeout(LocalNotifications.checkPermissions(), 'checkPermissions');
   if (permission.display !== 'granted') {
-    const requested = await withTimeout(LocalNotifications.requestPermissions(), 'requestPermissions');
+    if (!requestPermission) return null;
+    const requested = await LocalNotifications.requestPermissions();
     if (requested.display !== 'granted') return null;
   }
 
@@ -68,10 +68,14 @@ const ensurePermissionAndChannel = async () => {
   return LocalNotifications;
 };
 
-export const scheduleIntelligentNotifications = async (enabled: boolean, reminders: Reminder[]) => {
+export const scheduleIntelligentNotifications = async (
+  enabled: boolean,
+  reminders: Reminder[],
+  options?: { requestPermission?: boolean }
+) => {
   if (!isNative) return 0;
 
-  const LocalNotifications = await ensurePermissionAndChannel();
+  const LocalNotifications = await ensurePermissionAndChannel(options?.requestPermission ?? true);
   if (!LocalNotifications) return 0;
 
   const pending = await withTimeout(LocalNotifications.getPending(), 'getPending');
@@ -102,7 +106,7 @@ export const scheduleIntelligentNotifications = async (enabled: boolean, reminde
       if (scheduledAt <= now) return;
 
       notifications.push({
-        id: buildNotificationId(dateKey, reminderIndex),
+        id: buildNotificationId(dayOffset, reminderIndex),
         title: 'MoodListener',
         body: getIntelligentMessage(hours, scheduledAt, recentMood),
         channelId: CHANNEL_ID,
@@ -164,4 +168,12 @@ export const refreshNotifications = async () => {
   if (!isNative) return 0;
   const settings = await fetchSettings();
   return scheduleIntelligentNotifications(!!settings.notification_enabled, settings.reminders || []);
+};
+
+export const refreshNotificationsIfAuthorized = async () => {
+  if (!isNative) return 0;
+  const settings = await fetchSettings();
+  return scheduleIntelligentNotifications(!!settings.notification_enabled, settings.reminders || [], {
+    requestPermission: false
+  });
 };

@@ -111,6 +111,7 @@ export const Settings: React.FC = () => {
       await updateSettings({ app_lock_enabled: true, app_lock_password_hash: nextHash });
       setAppLockEnabled(true);
       setAppLockHash(nextHash);
+      emitAppLockChanged();
       showToast('应用锁已开启', 'success');
     } catch (error) {
       showToast('开启失败，请重试', 'error');
@@ -148,6 +149,7 @@ export const Settings: React.FC = () => {
       await updateSettings({ app_lock_enabled: true, app_lock_password_hash: nextHash });
       setAppLockEnabled(true);
       setAppLockHash(nextHash);
+      emitAppLockChanged();
       showToast('应用密码已更新', 'success');
     } catch (error) {
       showToast('修改失败，请重试', 'error');
@@ -181,6 +183,7 @@ export const Settings: React.FC = () => {
       await updateSettings({ app_lock_enabled: false, app_lock_password_hash: null });
       setAppLockEnabled(false);
       setAppLockHash(null);
+      emitAppLockChanged();
       showToast('应用锁已关闭', 'success');
     } catch (error) {
       showToast('关闭失败，请重试', 'error');
@@ -286,7 +289,7 @@ export const Settings: React.FC = () => {
   };
 
   const rowClassName = 'flex items-center justify-between gap-3 p-4 text-left transition-colors cursor-pointer active:bg-black/3 dark:active:bg-white/6';
-  const iconClassName = 'flex size-10 items-center justify-center rounded-2xl bg-primary/10 text-primary';
+  const iconClassName = 'flex size-10 items-center justify-center rounded-[12px] border-2 border-dashed border-[var(--ui-border-subtle-light)] bg-[var(--ui-surface-card-light)] text-[var(--ui-brand-primary-strong)] shadow-[2px_2px_0_rgba(44,44,44,0.1)] dark:border-[var(--ui-border-subtle-dark)] dark:bg-[var(--ui-surface-card-dark)] dark:text-[var(--ui-brand-primary)]';
 
   return (
     <div className="page-shell relative flex min-h-screen w-full flex-col animate-in fade-in slide-in-from-bottom-2">
@@ -300,8 +303,8 @@ export const Settings: React.FC = () => {
         <input ref={importInputRef} type="file" accept=".mlbk,.json,application/json" className="hidden" onChange={handleSecureImportFileChange} />
 
         <section>
-          <div className="mb-3 px-1 text-xs font-black uppercase tracking-[0.18em] text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">个性化设置</div>
-          <div className="ui-card overflow-hidden">
+          <p className="scrapbook-stamp mb-3">个性化设置</p>
+          <div className="ui-card ui-card--scrapbook ui-card--note overflow-hidden">
             <div className={`${rowClassName} border-b border-[var(--ui-border-subtle-light)] dark:border-[var(--ui-border-subtle-dark)]`} onClick={() => navigate('/settings/tags')}>
               <div className="flex items-center gap-3">
                 <div className={iconClassName}><Icon name="sell" className="text-[22px]" /></div>
@@ -351,7 +354,7 @@ export const Settings: React.FC = () => {
                     </button>
                   ) : (
                     <>
-                      <div className="rounded-2xl border border-[var(--ui-border-subtle-light)] bg-[var(--ui-surface-muted-light)] px-3.5 py-3 text-xs leading-5 text-[var(--ui-text-secondary-light)] dark:border-[var(--ui-border-subtle-dark)] dark:bg-[var(--ui-surface-muted-dark)] dark:text-[var(--ui-text-secondary-dark)]">
+                      <div className="rounded-[12px] border-2 border-dashed border-[var(--ui-border-subtle-light)] bg-[var(--ui-surface-muted-light)] px-3.5 py-3 text-xs leading-5 text-[var(--ui-text-secondary-light)] shadow-[2px_2px_0_rgba(44,44,44,0.1)] dark:border-[var(--ui-border-subtle-dark)] dark:bg-[var(--ui-surface-muted-dark)] dark:text-[var(--ui-text-secondary-dark)]">
                         应用每次进入或回到前台时，都需要先输入密码才能继续使用。
                       </div>
                       <div className="grid grid-cols-2 gap-2">
@@ -392,7 +395,8 @@ export const Settings: React.FC = () => {
                     <button
                       key={option.id}
                       onClick={() => handleDarkModeChange(option.id)}
-                      className={`flex flex-col items-center gap-2 rounded-2xl border px-4 py-3 ${darkMode === option.id ? 'border-primary bg-primary text-white shadow-sm' : 'border-[var(--ui-border-subtle-light)] bg-[var(--ui-surface-muted-light)] dark:border-[var(--ui-border-subtle-dark)] dark:bg-[var(--ui-surface-muted-dark)]'}`}
+                      className={`flex flex-col items-center gap-2 rounded-[12px] border-2 border-dashed px-4 py-3 transition-all ${darkMode === option.id ? 'border-[var(--ui-border-strong-light)] bg-[var(--ui-surface-card-light)] text-[var(--ui-text-primary-light)] shadow-[2px_2px_0_rgba(44,44,44,0.12)] dark:border-[var(--ui-border-strong-dark)] dark:bg-[var(--ui-surface-card-dark)] dark:text-[var(--ui-text-primary-dark)]' : 'border-[var(--ui-border-subtle-light)] bg-[var(--ui-surface-muted-light)] dark:border-[var(--ui-border-subtle-dark)] dark:bg-[var(--ui-surface-muted-dark)]'}`}
+                      style={{ transform: `rotate(${darkMode === option.id ? (option.id === 'dark' ? '-0.7deg' : '0.55deg') : (option.id === 'system' ? '-0.25deg' : '0.2deg')})` }}
                     >
                       <Icon name={option.icon} size={22} />
                       <span className="text-xs font-semibold">{option.label}</span>
@@ -423,7 +427,7 @@ export const Settings: React.FC = () => {
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  <div className="size-4 rounded-full border border-[var(--ui-border-subtle-light)] shadow-sm dark:border-[var(--ui-border-subtle-dark)]" style={{ backgroundColor: THEMES.find((item) => item.id === currentTheme)?.hex }} />
+                  <div className="size-4 rounded-[6px] border-2 border-dashed border-[var(--ui-border-subtle-light)] shadow-[1px_1px_0_rgba(44,44,44,0.12)] dark:border-[var(--ui-border-subtle-dark)]" style={{ backgroundColor: THEMES.find((item) => item.id === currentTheme)?.hex, transform: 'rotate(-7deg)' }} />
                   <Icon name={showThemePicker ? 'expand_less' : 'expand_more'} size={20} className="text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]" />
                 </div>
               </button>
@@ -433,8 +437,8 @@ export const Settings: React.FC = () => {
                   {THEMES.map((theme) => (
                     <button key={theme.id} onClick={() => handleThemeChange(theme.id)} className="group relative flex flex-col items-center gap-1">
                       <div
-                        className={`size-10 rounded-full border-2 transition-all ${currentTheme === theme.id ? 'scale-110 border-[var(--ui-brand-primary)] ring-4 ring-[var(--ui-focus-ring)]' : 'border-white group-hover:scale-105 dark:border-[var(--ui-border-subtle-dark)]'}`}
-                        style={{ backgroundColor: theme.hex }}
+                        className={`size-10 rounded-[10px] border-2 border-dashed transition-all ${currentTheme === theme.id ? 'scale-110 border-[var(--ui-brand-primary)] ring-4 ring-[var(--ui-focus-ring)]' : 'border-[var(--ui-border-subtle-light)] group-hover:scale-105 dark:border-[var(--ui-border-subtle-dark)]'}`}
+                        style={{ backgroundColor: theme.hex, transform: `rotate(${currentTheme === theme.id ? '-5deg' : '4deg'})` }}
                       >
                         {currentTheme === theme.id && (
                           <div className="flex h-full w-full items-center justify-center">
@@ -452,13 +456,13 @@ export const Settings: React.FC = () => {
         </section>
 
         <section>
-          <div className="mb-3 px-1 text-xs font-black uppercase tracking-[0.18em] text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">数据管理</div>
+          <p className="scrapbook-stamp mb-3">数据管理</p>
           <div className="flex flex-col gap-3">
-            <div className="ui-card ui-card--subtle p-4">
+            <div className="ui-card ui-card--subtle ui-card--scrapbook ui-card--note p-4">
               <div className="mb-4 flex items-start justify-between gap-3">
                 <div>
-                  <h3 className="text-sm font-bold">备份（安全、可恢复）</h3>
-                  <p className="mt-1 text-xs text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">加密备份只保存在本地文件，恢复时需要口令。</p>
+                  <h3 className="scrapbook-title text-sm font-extrabold">备份（安全、可恢复）</h3>
+                  <p className="mt-2 text-xs text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">加密备份只保存在本地文件，恢复时需要口令。</p>
                 </div>
                 <Icon name="enhanced_encryption" className="text-primary" />
               </div>
@@ -467,11 +471,11 @@ export const Settings: React.FC = () => {
               </button>
             </div>
 
-            <div className="ui-card p-4">
+            <div className="ui-card ui-card--scrapbook ui-card--ledger p-4">
               <div className="mb-4 flex items-start justify-between gap-3">
                 <div>
-                  <h3 className="text-sm font-bold">导出（外部使用）</h3>
-                  <p className="mt-1 text-xs text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">用于表格分析或其它工具查看，不用于完整恢复。</p>
+                  <h3 className="scrapbook-title text-sm font-extrabold">导出（外部使用）</h3>
+                  <p className="mt-2 text-xs text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">用于表格分析或其它工具查看，不用于完整恢复。</p>
                 </div>
                 <Icon name="ios_share" className="text-primary" />
               </div>
@@ -482,18 +486,18 @@ export const Settings: React.FC = () => {
               </div>
             </div>
 
-            <div className="ui-card p-4">
+            <div className="ui-card ui-card--scrapbook ui-card--note p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h3 className="text-sm font-bold">从备份恢复</h3>
-                  <p className="mt-1 text-xs text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">用你保存的加密备份，把数据恢复到当时的状态。</p>
+                  <h3 className="scrapbook-title text-sm font-extrabold">从备份恢复</h3>
+                  <p className="mt-2 text-xs text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">用你保存的加密备份，把数据恢复到当时的状态。</p>
                 </div>
                 <Icon name="settings_backup_restore" className="text-primary" />
               </div>
 
-              <div className="mt-4 rounded-2xl border border-[var(--ui-border-subtle-light)] bg-[var(--ui-surface-muted-light)] px-3.5 py-3 dark:border-[var(--ui-border-subtle-dark)] dark:bg-[var(--ui-surface-muted-dark)]">
+              <div className="mt-4 sketch-note sketch-note--paper px-3.5 py-3">
                 <div className="flex items-start gap-3">
-                  <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/12 text-primary">
+                  <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-[10px] border-2 border-dashed border-[var(--ui-border-subtle-light)] bg-[var(--ui-surface-card-light)] text-primary dark:border-[var(--ui-border-subtle-dark)] dark:bg-[var(--ui-surface-card-dark)]">
                     <Icon name="info" size={18} />
                   </div>
                   <div className="space-y-1">
@@ -513,8 +517,8 @@ export const Settings: React.FC = () => {
         </section>
 
         <section>
-          <div className="mb-3 px-1 text-xs font-black uppercase tracking-[0.18em] text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">关于</div>
-          <div className="ui-card overflow-hidden">
+          <p className="scrapbook-stamp mb-3">关于</p>
+          <div className="ui-card ui-card--scrapbook ui-card--note overflow-hidden">
             <button className={`${rowClassName} w-full border-b border-[var(--ui-border-subtle-light)] dark:border-[var(--ui-border-subtle-dark)]`} onClick={() => navigate('/settings/about')}>
               <div className="flex items-center gap-3">
                 <div className={iconClassName}><Icon name="info" className="text-[22px]" /></div>
@@ -538,10 +542,10 @@ export const Settings: React.FC = () => {
           </div>
         </section>
 
-        <div className="ui-card ui-card--subtle p-4 text-center">
-          <p className="text-sm font-bold">MoodListener - 听见你的情绪</p>
-          <p className="mt-1 text-xs text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">Made with heart for your mental health</p>
-          <div className="mt-4 inline-flex items-center justify-center gap-2 rounded-full border border-[var(--ui-border-subtle-light)] bg-white/70 px-3 py-2 dark:border-[var(--ui-border-subtle-dark)] dark:bg-white/5">
+        <div className="ui-card ui-card--subtle ui-card--scrapbook ui-card--note p-4 text-center">
+          <p className="scrapbook-title text-sm font-extrabold">MoodListener - 听见你的情绪</p>
+          <p className="mt-2 text-xs text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">Made with heart for your mental health</p>
+          <div className="mt-4 inline-flex items-center justify-center gap-2 rounded-[12px] border-2 border-dashed border-[var(--ui-border-subtle-light)] bg-[var(--ui-surface-card-light)] px-3 py-2 shadow-[2px_2px_0_rgba(44,44,44,0.08)] dark:border-[var(--ui-border-subtle-dark)] dark:bg-[var(--ui-surface-card-dark)]">
             <Icon name="verified_user" className="text-[14px] text-primary" />
             <span className="text-[11px] font-bold uppercase tracking-[0.18em]">本地存储已开启</span>
           </div>
