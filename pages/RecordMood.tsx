@@ -339,12 +339,12 @@ export const RecordMood: React.FC = () => {
         <div className="flex items-center justify-between gap-3">
           <button
             onClick={() => void handleBack()}
-            className="size-10 rounded-full flex items-center justify-center bg-white/55 dark:bg-white/5 border border-[var(--ui-border-subtle-light)] dark:border-[var(--ui-border-subtle-dark)]"
+            className="sketch-icon-button size-10"
           >
             <Icon name="arrow_back_ios_new" />
           </button>
           <div className="text-center">
-            <h1 className="text-lg font-extrabold tracking-tight">记录一下</h1>
+            <h1 className="text-lg font-extrabold italic tracking-tight">记录一下</h1>
             <p className="mt-1 text-xs text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">把此刻留住，晚点再慢慢回看。</p>
           </div>
           <button
@@ -358,24 +358,20 @@ export const RecordMood: React.FC = () => {
       </header>
 
       <main className="page-content pb-8 overflow-y-auto">
-        <section className="ui-card ui-card--hero p-4 animate-in fade-in slide-in-from-bottom-2">
+        <section className="ui-card ui-card--hero ui-card--scrapbook ui-card--note p-4 animate-in fade-in slide-in-from-bottom-2">
           <div className="mb-4 text-center">
-            <p className="ui-card-title mb-1">情绪梯度</p>
-            <h2 className="text-lg font-extrabold">现在的你，更靠近哪一种状态？</h2>
+            <p className="scrapbook-stamp mb-2">情绪梯度</p>
+            <h2 className="scrapbook-title text-lg font-extrabold">现在的你，更靠近哪一种状态？</h2>
           </div>
           <div className="grid grid-cols-5 gap-2">
-            {MOOD_LEVELS.map((item) => {
+            {MOOD_LEVELS.map((item, index) => {
               const active = moodScore === item.score;
               return (
                 <button
                   key={item.score}
                   onClick={() => setMoodScore(item.score)}
-                  className="flex flex-col items-center gap-2 rounded-[18px] px-1 py-2 transition-all"
-                  style={{
-                    background: active ? 'rgba(255,255,255,0.72)' : 'transparent',
-                    boxShadow: active ? '0 16px 28px -22px rgba(79,71,61,0.28)' : 'none',
-                    transform: active ? 'translateY(-2px)' : 'none'
-                  }}
+                  className={`scrapbook-polaroid flex flex-col items-center gap-2 px-1 py-2 transition-all ${active ? 'border-[var(--ui-text-primary-light)] bg-[var(--ui-surface-card-light)] shadow-[3px_3px_0_rgba(44,44,44,0.18)] dark:border-[var(--ui-text-primary-dark)] dark:bg-[var(--ui-surface-card-dark)]' : ''}`}
+                  style={{ transform: active ? 'rotate(-1deg) translateY(-1px)' : `rotate(${index % 2 === 0 ? '-0.8deg' : '0.7deg'})` }}
                 >
                   <MoodFaceIcon mood={item} size={56} />
                   <span className="text-[10px] font-bold leading-4 sm:text-[11px]" style={{ color: item.displayColor }}>{item.label}</span>
@@ -385,7 +381,7 @@ export const RecordMood: React.FC = () => {
           </div>
         </section>
 
-        <section className="ui-card p-4 animate-in fade-in slide-in-from-bottom-2">
+        <section className="ui-card ui-card--scrapbook ui-card--ledger p-4 animate-in fade-in slide-in-from-bottom-2">
           <div className="mb-3 flex items-center justify-between">
             <div>
               <p className="ui-card-title mb-1">活动</p>
@@ -407,7 +403,7 @@ export const RecordMood: React.FC = () => {
                     <button
                       key={activity.id}
                       onClick={() => handleToggleActivity(activity.id)}
-                      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-semibold ${selected ? 'bg-primary text-white border-primary shadow-sm' : 'bg-[var(--ui-surface-muted-light)] dark:bg-[var(--ui-surface-muted-dark)] border-[var(--ui-border-subtle-light)] dark:border-[var(--ui-border-subtle-dark)] text-[var(--ui-text-primary-light)] dark:text-[var(--ui-text-primary-dark)]'}`}
+                      className={`sketch-chip ${selected ? 'sketch-chip--active' : 'sketch-chip--stamp'}`}
                     >
                       <Icon name={activity.icon || 'label'} size={14} />
                       <span>{activity.name}</span>
@@ -422,7 +418,7 @@ export const RecordMood: React.FC = () => {
             {groups.map((group) => {
               const expanded = expandedGroupIds.includes(group.id);
               return (
-                <div key={group.id} className="overflow-hidden rounded-[20px] border border-[var(--ui-border-subtle-light)] bg-[var(--ui-surface-muted-light)] dark:border-[var(--ui-border-subtle-dark)] dark:bg-[var(--ui-surface-muted-dark)]">
+                <div key={group.id} className="ui-card ui-card--subtle ui-card--scrapbook overflow-hidden p-0">
                   <button
                     onClick={() => toggleGroup(group.id)}
                     className="flex w-full items-center justify-between px-4 py-3 text-left"
@@ -442,7 +438,7 @@ export const RecordMood: React.FC = () => {
                           <button
                             key={activity.id}
                             onClick={() => handleToggleActivity(activity.id)}
-                            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-semibold ${selected ? 'bg-primary text-white border-primary shadow-sm' : 'bg-white/75 dark:bg-white/5 border-[var(--ui-border-subtle-light)] dark:border-[var(--ui-border-subtle-dark)] text-[var(--ui-text-primary-light)] dark:text-[var(--ui-text-primary-dark)]'}`}
+                            className={`sketch-chip ${selected ? 'sketch-chip--active' : 'sketch-chip--stamp'}`}
                           >
                             <Icon name={activity.icon || 'label'} size={14} />
                             <span>{activity.name}</span>
@@ -457,7 +453,7 @@ export const RecordMood: React.FC = () => {
           </div>
         </section>
 
-        <section className="ui-card ui-card--subtle p-4 animate-in fade-in slide-in-from-bottom-2">
+        <section className="ui-card ui-card--subtle ui-card--scrapbook ui-card--note p-4 animate-in fade-in slide-in-from-bottom-2">
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
               <p className="ui-card-title mb-1">快记一句</p>
@@ -468,7 +464,7 @@ export const RecordMood: React.FC = () => {
             </button>
           </div>
 
-          <div className="ui-input-shell">
+          <div className="ui-input-shell ui-input-shell--scrapbook">
             <input
               type="text"
               value={quickNote}
@@ -483,7 +479,7 @@ export const RecordMood: React.FC = () => {
           )}
         </section>
 
-        <section className="ui-card p-4 animate-in fade-in slide-in-from-bottom-2">
+        <section className="ui-card ui-card--scrapbook ui-card--note p-4 animate-in fade-in slide-in-from-bottom-2">
           <button
             onClick={() => setShowExtras((prev) => !prev)}
             className="flex w-full items-center justify-between gap-3 text-left"
@@ -499,7 +495,7 @@ export const RecordMood: React.FC = () => {
             <div className="mt-4 flex flex-col gap-4 animate-in fade-in slide-in-from-top-2">
               <div>
                 <label className="ui-field-label">位置</label>
-                <div className="ui-input-shell mt-2">
+                <div className="ui-input-shell ui-input-shell--scrapbook mt-2">
                   <input
                     type="text"
                     value={location}
@@ -532,7 +528,7 @@ export const RecordMood: React.FC = () => {
                 {images.length > 0 && (
                   <div className="mt-3 grid grid-cols-4 gap-2">
                     {images.map((img, index) => (
-                      <div key={`${img}-${index}`} className="relative size-16 overflow-hidden rounded-2xl bg-[var(--ui-surface-muted-light)] dark:bg-[var(--ui-surface-muted-dark)]">
+                      <div key={`${img}-${index}`} className="scrapbook-polaroid relative size-16 overflow-hidden">
                         <img src={img} alt={`图片${index + 1}`} className="h-full w-full object-cover" />
                         <button
                           onClick={() => setImages((prev) => prev.filter((_, currentIndex) => currentIndex !== index))}
@@ -549,7 +545,7 @@ export const RecordMood: React.FC = () => {
               {isNative && (
                 <div>
                   <label className="ui-field-label">声音日志</label>
-                  <div className="mt-2 rounded-[22px] border border-[var(--ui-border-subtle-light)] bg-[var(--ui-surface-muted-light)]/72 p-4 dark:border-[var(--ui-border-subtle-dark)] dark:bg-[var(--ui-surface-muted-dark)]/78">
+                  <div className="mt-2 rounded-[12px] border-2 border-dashed border-[var(--ui-border-subtle-light)] bg-[var(--ui-surface-muted-light)]/72 p-4 shadow-[2px_2px_0_rgba(44,44,44,0.1)] dark:border-[var(--ui-border-subtle-dark)] dark:bg-[var(--ui-surface-muted-dark)]/78">
                     <button
                       type="button"
                       onPointerDown={() => void handleStartRecording()}
@@ -557,7 +553,7 @@ export const RecordMood: React.FC = () => {
                       onPointerLeave={handleStopRecording}
                       onPointerCancel={handleStopRecording}
                       disabled={audioBusy || audioClips.length >= 1}
-                      className={`flex w-full items-center justify-center gap-3 rounded-[18px] px-4 py-4 text-sm font-semibold transition ${isRecording ? 'bg-primary text-white' : 'bg-white/80 text-[var(--ui-text-primary-light)] dark:bg-white/6 dark:text-[var(--ui-text-primary-dark)]'}`}
+                      className={`flex w-full items-center justify-center gap-3 rounded-[12px] border-2 border-dashed px-4 py-4 text-sm font-semibold ${isRecording ? 'border-[var(--ui-text-primary-light)] bg-[var(--ui-text-primary-light)] text-[var(--ui-surface-page-light)] dark:border-[var(--ui-text-primary-dark)] dark:bg-[var(--ui-text-primary-dark)] dark:text-[var(--ui-surface-page-dark)]' : 'border-[var(--ui-border-subtle-light)] bg-[var(--ui-surface-card-light)] text-[var(--ui-text-primary-light)] dark:border-[var(--ui-border-subtle-dark)] dark:bg-[var(--ui-surface-card-dark)] dark:text-[var(--ui-text-primary-dark)]'}`}
                     >
                       <Icon name={isRecording ? 'radio_button_checked' : 'mic'} size={18} />
                       {isRecording ? `松开结束 · ${recordingSeconds}s` : audioClips.length >= 1 ? '已保存 1 条声音片段' : '长按开始录音'}
@@ -565,7 +561,7 @@ export const RecordMood: React.FC = () => {
                     <p className="mt-3 text-xs text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">首版先支持 1 条声音片段，最长 {MAX_AUDIO_SECONDS} 秒。</p>
 
                     {audioClips.map((clip) => (
-                      <div key={clip.id} className="mt-3 rounded-[18px] bg-white/72 p-3 dark:bg-white/6">
+                      <div key={clip.id} className="mt-3 rounded-[12px] border-2 border-dashed border-[var(--ui-border-subtle-light)] bg-[var(--ui-surface-card-light)] p-3 shadow-[2px_2px_0_rgba(44,44,44,0.1)] dark:border-[var(--ui-border-subtle-dark)] dark:bg-[var(--ui-surface-card-dark)]">
                         <div className="mb-2 flex items-center justify-between gap-3">
                           <span className="text-xs font-semibold text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">声音片段 · {clip.durationSec}s</span>
                           <button

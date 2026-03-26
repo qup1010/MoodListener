@@ -146,15 +146,16 @@ export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       <div className="pointer-events-none fixed left-0 right-0 top-[calc(env(safe-area-inset-top)+10px)] z-[120] flex flex-col items-center gap-2 px-4">
         {toasts.map((toast) => {
           const style = toast.type === 'success'
-            ? 'bg-emerald-600/95 text-white'
+            ? 'border-[rgba(79,139,99,0.45)] bg-[#f3f0e7] text-[#2c2c2c] dark:border-[rgba(127,183,144,0.5)] dark:bg-[#2b241f] dark:text-[#efe5d6]'
             : toast.type === 'error'
-              ? 'bg-rose-600/95 text-white'
-              : 'bg-slate-900/90 text-white';
+              ? 'border-[rgba(184,100,88,0.45)] bg-[#f6ece8] text-[#2c2c2c] dark:border-[rgba(239,156,144,0.48)] dark:bg-[#302420] dark:text-[#efe5d6]'
+              : 'border-[var(--ui-border-strong-light)] bg-[var(--ui-surface-card-light)] text-[var(--ui-text-primary-light)] dark:border-[var(--ui-border-strong-dark)] dark:bg-[var(--ui-surface-card-dark)] dark:text-[var(--ui-text-primary-dark)]';
 
           return (
             <div
               key={toast.id}
-              className={`animate-in fade-in slide-in-from-top-2 pointer-events-auto max-w-md rounded-xl px-4 py-2.5 text-sm font-medium shadow-xl ${style}`}
+              className={`animate-in fade-in slide-in-from-top-2 pointer-events-auto max-w-md rounded-[12px] border-2 border-dashed px-4 py-2.5 text-sm font-medium shadow-[3px_3px_0_rgba(44,44,44,0.18)] ${style}`}
+              style={{ transform: 'rotate(-0.6deg)' }}
             >
               {toast.message}
             </div>
@@ -163,28 +164,28 @@ export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       </div>
 
       {confirmState && (
-        <div className="fixed inset-0 z-[130] flex items-center justify-center bg-black/45 px-4 animate-in fade-in">
-          <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl dark:bg-gray-900 animate-in slide-in-from-bottom-4">
+        <div className="fixed inset-0 z-[130] flex items-center justify-center bg-[rgba(44,44,44,0.22)] px-4 animate-in fade-in">
+          <div className="w-full max-w-sm rounded-[14px] border-2 border-dashed border-[var(--ui-border-strong-light)] bg-[var(--ui-surface-card-light)] p-5 shadow-[5px_5px_0_rgba(44,44,44,0.2)] dark:border-[var(--ui-border-strong-dark)] dark:bg-[var(--ui-surface-card-dark)] animate-in slide-in-from-bottom-4" style={{ transform: 'rotate(-1deg)' }}>
             {confirmState.options.title && (
-              <h3 className="text-base font-bold text-gray-900 dark:text-white">
+              <h3 className="text-base font-bold italic text-[var(--ui-text-primary-light)] dark:text-[var(--ui-text-primary-dark)]">
                 {confirmState.options.title}
               </h3>
             )}
-            <p className="mt-2 text-sm leading-relaxed text-gray-600 dark:text-gray-300">
+            <p className="mt-2 text-sm leading-relaxed text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">
               {confirmState.options.message}
             </p>
             <div className="mt-5 grid grid-cols-2 gap-3">
               <button
                 type="button"
                 onClick={() => closeConfirm(false)}
-                className="h-11 rounded-xl bg-gray-100 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+                className="ui-action-secondary"
               >
                 {confirmState.options.cancelText || '取消'}
               </button>
               <button
                 type="button"
                 onClick={() => closeConfirm(true)}
-                className={`h-11 rounded-xl text-sm font-semibold transition-colors ${(confirmState.options.confirmTone === 'danger' || confirmState.options.danger) ? 'bg-primary text-white hover:brightness-110 ring-1 ring-primary/20' : 'bg-primary text-white hover:brightness-110'}`}
+                className={`ui-action-primary ${(confirmState.options.confirmTone === 'danger' || confirmState.options.danger) ? '!bg-[#b86458] !border-[#b86458] !text-[#fbf6ee] dark:!bg-[#b86458] dark:!border-[#b86458]' : ''}`}
               >
                 {confirmState.options.confirmText || '确认'}
               </button>
@@ -194,36 +195,38 @@ export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       )}
 
       {promptState && (
-        <div className="fixed inset-0 z-[131] flex items-center justify-center bg-black/45 px-4 animate-in fade-in">
-          <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl dark:bg-gray-900 animate-in slide-in-from-bottom-4">
+        <div className="fixed inset-0 z-[131] flex items-center justify-center bg-[rgba(44,44,44,0.22)] px-4 animate-in fade-in">
+          <div className="w-full max-w-sm rounded-[14px] border-2 border-dashed border-[var(--ui-border-strong-light)] bg-[var(--ui-surface-card-light)] p-5 shadow-[5px_5px_0_rgba(44,44,44,0.2)] dark:border-[var(--ui-border-strong-dark)] dark:bg-[var(--ui-surface-card-dark)] animate-in slide-in-from-bottom-4" style={{ transform: 'rotate(0.8deg)' }}>
             {promptState.options.title && (
-              <h3 className="text-base font-bold text-gray-900 dark:text-white">
+              <h3 className="text-base font-bold italic text-[var(--ui-text-primary-light)] dark:text-[var(--ui-text-primary-dark)]">
                 {promptState.options.title}
               </h3>
             )}
-            <p className="mt-2 text-sm leading-relaxed text-gray-600 dark:text-gray-300">
+            <p className="mt-2 text-sm leading-relaxed text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">
               {promptState.options.message}
             </p>
-            <input
-              autoFocus
-              type={promptState.options.inputType || 'text'}
-              value={promptValue}
-              onChange={(e) => setPromptValue(e.target.value)}
-              placeholder={promptState.options.placeholder || ''}
-              className="mt-4 h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-900 outline-none focus:border-primary dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-            />
+            <div className="ui-input-shell mt-4">
+              <input
+                autoFocus
+                type={promptState.options.inputType || 'text'}
+                value={promptValue}
+                onChange={(e) => setPromptValue(e.target.value)}
+                placeholder={promptState.options.placeholder || ''}
+                className="ui-input"
+              />
+            </div>
             <div className="mt-5 grid grid-cols-2 gap-3">
               <button
                 type="button"
                 onClick={() => closePrompt(null)}
-                className="h-11 rounded-xl bg-gray-100 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+                className="ui-action-secondary"
               >
                 {promptState.options.cancelText || '取消'}
               </button>
               <button
                 type="button"
                 onClick={() => closePrompt(promptValue.trim())}
-                className="h-11 rounded-xl bg-primary text-sm font-semibold text-white transition-colors hover:brightness-110"
+                className="ui-action-primary"
               >
                 {promptState.options.confirmText || '确认'}
               </button>

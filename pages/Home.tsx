@@ -120,7 +120,7 @@ export const Home: React.FC = () => {
 
   return (
     <div className="page-shell flex min-h-screen flex-col animate-in fade-in slide-in-from-bottom-2">
-      <header className="page-header px-5 pb-1 pt-6">
+      <header className="page-header px-5 pb-2 pt-6">
         <div className="block max-w-[22rem] text-left">
           <p className="mt-0.5 text-[0.98rem] font-medium italic leading-7 text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">
             {HOME_QUOTES[quoteIndex].text}
@@ -129,14 +129,15 @@ export const Home: React.FC = () => {
       </header>
 
       <main className="page-content flex-1 overflow-y-auto !pt-2 pb-6">
-        <section className="ui-card ui-card--hero animate-in fade-in slide-in-from-bottom-2 p-5">
+        <section className="ui-card ui-card--hero ui-card--scrapbook ui-card--note animate-in fade-in slide-in-from-bottom-2 p-5">
           <div className="mb-5 text-center">
+            <p className="scrapbook-stamp mb-3">{homeText.heroEyebrow}</p>
             <div
-              className="text-[1.92rem] font-black leading-tight sm:text-[2.12rem]"
+              className="scrapbook-title text-[1.92rem] font-black italic leading-tight text-[var(--ui-text-primary-light)] dark:text-[var(--ui-text-primary-dark)] sm:text-[2.12rem]"
               style={{
-                color: 'var(--ui-brand-primary)',
-                WebkitTextStroke: '1px var(--ui-border-strong-light)',
-                textShadow: '0 2px 8px rgba(194,148,62,0.15)'
+                textDecorationLine: 'underline',
+                textDecorationStyle: 'dashed',
+                textUnderlineOffset: '0.2em'
               }}
             >
               {homeText.heroAction}
@@ -144,12 +145,13 @@ export const Home: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-5 gap-2 sm:gap-3">
-            {MOOD_LEVELS.map((item) => (
+            {MOOD_LEVELS.map((item, index) => (
               <button
                 key={item.score}
                 type="button"
                 onClick={() => void handleQuickStart(item.score)}
-                className="flex flex-col items-center gap-2 rounded-[18px] px-1 py-2 text-center transition-transform hover:-translate-y-1 active:scale-[0.98]"
+                className="scrapbook-polaroid flex flex-col items-center gap-2 px-1 py-2 text-center transition-transform"
+                style={{ transform: `rotate(${index % 2 === 0 ? '-1.1deg' : '0.9deg'})` }}
               >
                 <MoodFaceIcon mood={item} size={58} />
                 <div className="whitespace-nowrap text-center text-[10px] font-bold leading-4 sm:text-[11px]" style={{ color: item.displayColor }}>
@@ -160,7 +162,7 @@ export const Home: React.FC = () => {
           </div>
         </section>
 
-        <section className="ui-card ui-card--subtle animate-in fade-in slide-in-from-bottom-2 p-5">
+        <section className="ui-card ui-card--subtle ui-card--scrapbook animate-in fade-in slide-in-from-bottom-2 p-5">
           <div className="mb-5 flex items-start justify-between gap-4">
             <div>
               <p className="ui-card-title mb-2">{homeText.heroEyebrow}</p>
@@ -172,18 +174,18 @@ export const Home: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div className="ui-kpi">
+            <div className="ui-kpi ui-kpi--scrapbook">
               <div className="mb-1 text-[11px] font-semibold text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">{homeText.streakLabel}</div>
               <div className="text-lg font-extrabold text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">{stats.streak_days} 天</div>
             </div>
-            <div className="ui-kpi">
+            <div className="ui-kpi ui-kpi--scrapbook">
               <div className="mb-1 text-[11px] font-semibold text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">{homeText.totalLabel}</div>
               <div className="text-lg font-extrabold text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">{stats.total_entries} 条</div>
             </div>
           </div>
         </section>
 
-        <section className="ui-card animate-in fade-in slide-in-from-bottom-2 p-4">
+        <section className="ui-card ui-card--scrapbook ui-card--ledger animate-in fade-in slide-in-from-bottom-2 p-4">
           <div className="mb-4 flex items-start justify-between gap-3">
             <div>
               <p className="ui-card-title mb-1">{homeText.insightTitle}</p>
@@ -210,15 +212,15 @@ export const Home: React.FC = () => {
             <div className="flex flex-col gap-4">
               {isInsightEmpty ? (
                 <div className="grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.4fr)] gap-3">
-                  <div className="rounded-[24px] bg-[var(--ui-surface-muted-light)] px-4 py-4 dark:bg-[var(--ui-surface-muted-dark)]">
-                    <div className="text-[9px] font-normal tracking-[0.01em] text-[var(--ui-text-secondary-light)]/52 dark:text-[var(--ui-text-secondary-dark)]/52">{homeText.insightEmptyLabel}</div>
-                    <div className="mt-2 text-[1.42rem] font-semibold leading-none tracking-[-0.02em] text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]/88">
+                  <div className="sketch-note sketch-note--paper px-4 py-4">
+                    <div className="text-[9px] font-normal tracking-[0.01em] text-[var(--ui-text-secondary-light)]/70 dark:text-[var(--ui-text-secondary-dark)]/70">{homeText.insightEmptyLabel}</div>
+                    <div className="mt-2 text-[1.42rem] font-semibold italic leading-none tracking-[-0.02em] text-[var(--ui-text-primary-light)] dark:text-[var(--ui-text-primary-dark)]">
                       {insightMeta.statusText}
                     </div>
                   </div>
 
-                  <div className="rounded-[24px] bg-[var(--ui-surface-muted-light)]/78 px-4 py-4 dark:bg-[var(--ui-surface-muted-dark)]/88">
-                    <div className="text-[10px] font-medium text-[var(--ui-text-secondary-light)]/72 dark:text-[var(--ui-text-secondary-dark)]/72">本周状态</div>
+                  <div className="sketch-note sketch-note--paper px-4 py-4">
+                    <div className="text-[10px] font-medium text-[var(--ui-text-secondary-light)]/78 dark:text-[var(--ui-text-secondary-dark)]/78">本周状态</div>
                     <p className="mt-2 text-[0.92rem] font-medium leading-7 text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]/88">
                       {insightMeta.statusHint}
                     </p>
@@ -226,15 +228,15 @@ export const Home: React.FC = () => {
                 </div>
               ) : (
                 <div className="grid gap-3 sm:grid-cols-[minmax(0,0.9fr)_minmax(0,1.3fr)]">
-                  <div className="rounded-[24px] bg-[var(--ui-surface-muted-light)] px-4 py-4 dark:bg-[var(--ui-surface-muted-dark)]">
-                    <div className="text-[9px] font-normal tracking-[0.01em] text-[var(--ui-text-secondary-light)]/52 dark:text-[var(--ui-text-secondary-dark)]/52">每周节奏</div>
-                    <div className="mt-2 text-[1.42rem] font-semibold leading-none tracking-[-0.02em] text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]/88">
+                  <div className="sketch-note sketch-note--paper px-4 py-4">
+                    <div className="text-[9px] font-normal tracking-[0.01em] text-[var(--ui-text-secondary-light)]/70 dark:text-[var(--ui-text-secondary-dark)]/70">每周节奏</div>
+                    <div className="mt-2 text-[1.42rem] font-semibold italic leading-none tracking-[-0.02em] text-[var(--ui-text-primary-light)] dark:text-[var(--ui-text-primary-dark)]">
                       {insightMeta.statusText}
                     </div>
                   </div>
 
-                  <div className="rounded-[24px] bg-[var(--ui-surface-muted-light)]/78 px-4 py-4 dark:bg-[var(--ui-surface-muted-dark)]/88">
-                    <div className="text-[10px] font-medium text-[var(--ui-text-secondary-light)]/72 dark:text-[var(--ui-text-secondary-dark)]/72">{insightMeta.supportText}</div>
+                  <div className="sketch-note sketch-note--paper px-4 py-4">
+                    <div className="text-[10px] font-medium text-[var(--ui-text-secondary-light)]/78 dark:text-[var(--ui-text-secondary-dark)]/78">{insightMeta.supportText}</div>
                     <p className="mt-2 text-[0.92rem] font-medium leading-7 text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]/88">
                       {insightMeta.statusHint}
                     </p>
@@ -245,15 +247,15 @@ export const Home: React.FC = () => {
               {insightMeta.topActivities.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                   {insightMeta.topActivities.map((item) => (
-                    <span key={item} className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                    <span key={item} className="sketch-chip sketch-chip--stamp" style={{ transform: 'rotate(-1deg)' }}>
                       {item}
                     </span>
                   ))}
                 </div>
               )}
 
-              <div className="rounded-[26px] border border-[var(--ui-border-subtle-light)] bg-[var(--ui-surface-muted-light)]/72 p-4 dark:border-[var(--ui-border-subtle-dark)] dark:bg-[var(--ui-surface-muted-dark)]/70">
-                <div className="mb-2 text-[11px] font-semibold text-primary">一句建议</div>
+              <div className="sketch-note sketch-note--paper p-4">
+                <div className="mb-2 text-[11px] font-semibold italic text-[var(--ui-brand-primary-strong)] dark:text-[var(--ui-brand-primary)]">一句建议</div>
                 <p className="text-sm leading-6 text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">{insightMeta.suggestion}</p>
               </div>
             </div>
@@ -261,7 +263,7 @@ export const Home: React.FC = () => {
         </section>
 
         {(timeCapsuleLoading || timeCapsule) && (
-          <section className="ui-card ui-card--subtle animate-in fade-in slide-in-from-bottom-2 p-4">
+          <section className="ui-card ui-card--subtle ui-card--scrapbook ui-card--note animate-in fade-in slide-in-from-bottom-2 p-4">
             <div className="mb-3 flex items-start justify-between gap-3">
               <div>
                 <p className="ui-card-title mb-1">那个闪光的瞬间</p>
@@ -280,18 +282,19 @@ export const Home: React.FC = () => {
             {timeCapsuleLoading ? (
               <div className="flex flex-col gap-3 py-2">
                 <div className="ui-skeleton h-4 w-28" />
-                <div className="ui-skeleton h-12 w-full rounded-2xl" />
-                <div className="ui-skeleton h-3 w-3/4 rounded-md" />
+                <div className="ui-skeleton h-12 w-full rounded-[10px]" />
+                <div className="ui-skeleton h-3 w-3/4 rounded-[8px]" />
               </div>
             ) : timeCapsule ? (
               <button
                 type="button"
                 onClick={() => navigate(`/entry/${timeCapsule.entryId}`)}
-                className="w-full rounded-[24px] border border-[var(--ui-border-subtle-light)] bg-[var(--ui-surface-muted-light)]/78 p-4 text-left transition-transform hover:-translate-y-0.5 dark:border-[var(--ui-border-subtle-dark)] dark:bg-[var(--ui-surface-muted-dark)]/76"
+                className="sketch-note sketch-note--paper w-full p-4 text-left"
+                style={{ transform: 'rotate(-0.8deg)' }}
               >
                 <div className="mb-2 flex items-center justify-between gap-3">
                   <span className="text-xs font-semibold text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">{timeCapsule.date}</span>
-                  <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary">{timeCapsule.moodLabel}</span>
+                  <span className="sketch-chip sketch-chip--stamp px-2.5 py-1 text-[11px]" style={{ color: 'var(--ui-brand-primary-strong)' }}>{timeCapsule.moodLabel}</span>
                 </div>
                 <p className="text-sm font-semibold leading-7 text-[var(--ui-text-primary-light)] dark:text-[var(--ui-text-primary-dark)]">{timeCapsule.highlightText}</p>
                 {timeCapsule.activitySummary && (

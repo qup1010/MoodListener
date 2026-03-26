@@ -1,7 +1,7 @@
 ﻿import { MoodScore } from '../../types';
 
 export type MoodIconKey = 'ecstatic' | 'happy' | 'okay' | 'upset' | 'awful';
-export type MoodIconPackId = 'playful' | 'solid' | 'pebble' | 'minimal' | 'sticker' | 'pixel' | 'clay' | 'animeSoft' | 'animeCool';
+export type MoodIconPackId = 'playful' | 'solid' | 'pebble' | 'minimal' | 'sticker' | 'coloredPencilSticker' | 'stamp' | 'pixel' | 'clay' | 'animeSoft' | 'animeCool';
 
 export interface MoodLevelMeta {
   score: MoodScore;
@@ -30,6 +30,8 @@ export const MOOD_ICON_PACKS: MoodIconPackMeta[] = [
   { id: 'pebble', name: '圆润泡泡', description: '圆润轻松，整体最柔和' },
   { id: 'minimal', name: '极简线稿', description: '更克制，留白更多' },
   { id: 'sticker', name: '贴纸小脸', description: '像小贴纸一样，轮廓更完整' },
+  { id: 'coloredPencilSticker', name: '彩铅贴纸', description: '像手帐里的彩铅贴纸，边缘更柔和可爱' },
+  { id: 'stamp', name: '印章小脸', description: '像盖在纸上的橡皮章，克制又有手帐味道' },
   { id: 'pixel', name: '复古像素', description: '回到红白机时代的复古游戏感' },
   { id: 'clay', name: '质感膨胀', description: '模拟黏土与气球的立体解压质感' },
   { id: 'animeSoft', name: '萌系软漫', description: '更圆润、更柔亮的二次元小头像气质' },
@@ -40,7 +42,7 @@ export const resolveMoodIconPackId = (value?: string | null): MoodIconPackId => 
   if (value === 'soft') return 'pebble';
   if (value === 'scribble' || value === 'doodle') return 'playful';
   if (value === 'bold' || value === 'tile') return 'playful';
-  if (value === 'playful' || value === 'solid' || value === 'pebble' || value === 'minimal' || value === 'sticker' || value === 'pixel' || value === 'clay' || value === 'animeSoft' || value === 'animeCool') {
+  if (value === 'playful' || value === 'solid' || value === 'pebble' || value === 'minimal' || value === 'sticker' || value === 'coloredPencilSticker' || value === 'stamp' || value === 'pixel' || value === 'clay' || value === 'animeSoft' || value === 'animeCool') {
     return value;
   }
   return DEFAULT_MOOD_ICON_PACK_ID;

@@ -75,7 +75,7 @@ export const RecordNote: React.FC = () => {
         <div className="flex items-center justify-between gap-3">
           <button
             onClick={() => void handleBack()}
-            className="flex size-10 items-center justify-center rounded-full border border-[var(--ui-border-subtle-light)] bg-white/60 dark:border-[var(--ui-border-subtle-dark)] dark:bg-white/5"
+            className="sketch-icon-button flex size-10 items-center justify-center"
           >
             <Icon name="arrow_back_ios_new" size={18} />
           </button>
@@ -99,7 +99,8 @@ export const RecordNote: React.FC = () => {
             value={fullNote}
             onChange={(event) => setFullNote(event.target.value)}
             placeholder="比如：今天发生了什么？那一刻你心里最明显的感觉是什么？"
-            className="min-h-[22rem] w-full flex-1 resize-none rounded-[22px] border border-[var(--ui-border-subtle-light)] bg-[var(--ui-surface-muted-light)]/70 p-4 text-sm leading-7 text-[var(--ui-text-primary-light)] outline-none transition focus:border-primary/40 dark:border-[var(--ui-border-subtle-dark)] dark:bg-[var(--ui-surface-muted-dark)]/72 dark:text-[var(--ui-text-primary-dark)]"
+            className="min-h-[22rem] w-full flex-1 resize-none rounded-[12px] border-2 border-dashed border-[var(--ui-border-subtle-light)] bg-[var(--ui-surface-muted-light)]/70 p-4 text-sm leading-7 text-[var(--ui-text-primary-light)] outline-none dark:border-[var(--ui-border-subtle-dark)] dark:bg-[var(--ui-surface-muted-dark)]/72 dark:text-[var(--ui-text-primary-dark)]"
+            style={{ transform: 'rotate(-0.5deg)' }}
           />
         </section>
       </main>

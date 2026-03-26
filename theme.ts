@@ -57,46 +57,46 @@ export interface UIThemeTokens {
 
 export const BASE_UI_TOKENS: UIThemeTokens = {
     brand: {
-        primary: '#c2943e',
-        primaryStrong: '#355c5f'
+        primary: '#8b6a3f',
+        primaryStrong: '#5d4524'
     },
     surface: {
-        pageLight: '#f6f1e8',
-        pageDark: '#17140f',
-        cardLight: '#fffdf8',
-        cardDark: '#24211b',
-        mutedLight: '#f3ede1',
-        mutedDark: '#1f1b15',
-        heroLight: '#f4e9d6',
-        heroDark: '#201a13'
+        pageLight: '#f5f0e8',
+        pageDark: '#1d1915',
+        cardLight: '#fbf6ee',
+        cardDark: '#2b241f',
+        mutedLight: '#efe7da',
+        mutedDark: '#241e19',
+        heroLight: '#f2e6d3',
+        heroDark: '#312822'
     },
     text: {
-        primaryLight: '#4f473d',
-        primaryDark: '#ece4d8',
-        secondaryLight: '#857969',
-        secondaryDark: '#beb29d'
+        primaryLight: '#2c2c2c',
+        primaryDark: '#efe5d6',
+        secondaryLight: '#60574c',
+        secondaryDark: '#c8bcae'
     },
     border: {
-        subtleLight: 'rgba(75, 59, 37, 0.10)',
-        subtleDark: 'rgba(255, 242, 216, 0.10)',
-        strongLight: 'rgba(194, 148, 62, 0.22)',
-        strongDark: 'rgba(194, 148, 62, 0.28)'
+        subtleLight: 'rgba(44, 44, 44, 0.24)',
+        subtleDark: 'rgba(239, 229, 214, 0.22)',
+        strongLight: 'rgba(44, 44, 44, 0.46)',
+        strongDark: 'rgba(239, 229, 214, 0.38)'
     },
     accent: {
-        subtleLight: '#efe4d0',
-        subtleDark: '#2a241c'
+        subtleLight: '#ebe0cd',
+        subtleDark: '#382f27'
     },
     elevation: {
-        card: '0 20px 44px -30px rgba(79, 71, 61, 0.18)',
-        hero: '0 28px 60px -36px rgba(79, 71, 61, 0.22)'
+        card: '3px 3px 0 rgba(44, 44, 44, 0.18), 7px 7px 0 rgba(44, 44, 44, 0.06)',
+        hero: '4px 4px 0 rgba(44, 44, 44, 0.22), 10px 10px 0 rgba(44, 44, 44, 0.07)'
     },
     focus: {
-        ring: 'rgba(194, 148, 62, 0.22)'
+        ring: 'rgba(44, 44, 44, 0.16)'
     },
     mood: {
-        positive: '#4ade80',
-        neutral: '#facc15',
-        negative: '#f87171'
+        positive: '#4f8b63',
+        neutral: '#b98f31',
+        negative: '#b86458'
     }
 };
 
@@ -229,8 +229,6 @@ const applyThemeColors = (theme: typeof THEMES[0]) => {
     root.setProperty('--app-primary-dark', theme.primaryDark);
     root.setProperty('--ui-brand-primary', theme.hex);
     root.setProperty('--ui-brand-primary-strong', `rgb(${theme.primaryDark})`);
-    root.setProperty('--ui-border-strong-light', `color-mix(in srgb, ${theme.hex} 22%, transparent)`);
-    root.setProperty('--ui-border-strong-dark', `color-mix(in srgb, ${theme.hex} 30%, transparent)`);
-    root.setProperty('--ui-focus-ring', `color-mix(in srgb, ${theme.hex} 24%, transparent)`);
+    root.setProperty('--ui-focus-ring', `color-mix(in srgb, ${theme.hex} 18%, transparent)`);
 };
 

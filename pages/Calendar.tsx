@@ -1,6 +1,7 @@
 ﻿import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '../components/Icon';
+import { PageHeader } from '../components/PageHeader';
 import { fetchEntriesV2, fetchEntriesV2ByDate } from '../services';
 import { EntryV2, MoodScore } from '../types';
 import { getMoodMeta } from '../src/constants/moodV2';
@@ -177,17 +178,19 @@ export const CalendarView: React.FC = () => {
 
   return (
     <div className="page-shell relative flex min-h-screen w-full flex-col animate-in fade-in slide-in-from-bottom-2">
-      <header className="page-header px-4 py-3">
-        <div className="flex items-center justify-between gap-3">
-          <p className="page-subtitle">把一年摊开来看，你会更容易看见自己的情绪季节。</p>
+      <PageHeader
+        className="px-4 py-3"
+        title="情绪日历"
+        subtitle="把一年摊开来看，你会更容易看见自己的情绪季节。"
+        trailing={(
           <button
             onClick={() => navigate('/history')}
-            className="flex size-10 items-center justify-center rounded-full border border-[var(--ui-border-subtle-light)] bg-white/60 dark:border-[var(--ui-border-subtle-dark)] dark:bg-white/5"
+            className="sketch-icon-button flex size-10 items-center justify-center"
           >
             <Icon name="list" />
           </button>
-        </div>
-      </header>
+        )}
+      />
 
       <main className="page-content overflow-y-auto pb-8">
         <section className="ui-card ui-card--hero p-4">
@@ -200,13 +203,13 @@ export const CalendarView: React.FC = () => {
             <div className="flex gap-2">
               <button
                 onClick={() => setCurrentYear((value) => value - 1)}
-                className="flex size-10 items-center justify-center rounded-full border border-[var(--ui-border-subtle-light)] bg-white/60 dark:border-[var(--ui-border-subtle-dark)] dark:bg-white/5"
+                className="sketch-icon-button flex size-10 items-center justify-center"
               >
                 <Icon name="chevron_left" />
               </button>
               <button
                 onClick={() => setCurrentYear((value) => value + 1)}
-                className="flex size-10 items-center justify-center rounded-full border border-[var(--ui-border-subtle-light)] bg-white/60 dark:border-[var(--ui-border-subtle-dark)] dark:bg-white/5"
+                className="sketch-icon-button flex size-10 items-center justify-center"
               >
                 <Icon name="chevron_right" />
               </button>
@@ -250,7 +253,7 @@ export const CalendarView: React.FC = () => {
               <p className="text-sm font-semibold">正在铺开这一年的情绪轨迹...</p>
             </div>
           ) : (
-            <div className="rounded-[24px] border border-[var(--ui-border-subtle-light)] bg-[var(--ui-surface-muted-light)]/68 p-3 dark:border-[var(--ui-border-subtle-dark)] dark:bg-[var(--ui-surface-muted-dark)]/82">
+            <div className="rounded-[12px] border-2 border-dashed border-[var(--ui-border-subtle-light)] bg-[var(--ui-surface-muted-light)]/68 p-3 shadow-[2px_2px_0_rgba(44,44,44,0.1)] dark:border-[var(--ui-border-subtle-dark)] dark:bg-[var(--ui-surface-muted-dark)]/82">
               <div className="overflow-x-auto pb-1">
                 <div className="min-w-[860px]">
                   <div
@@ -319,13 +322,13 @@ export const CalendarView: React.FC = () => {
               <p className="ui-card-title mb-1">当天详情</p>
               <h2 className="text-base font-extrabold">{selectedDateLabel} 的记录</h2>
             </div>
-            <div className="rounded-full bg-[var(--ui-surface-muted-light)] px-3 py-1 text-xs font-semibold text-[var(--ui-text-secondary-light)] dark:bg-[var(--ui-surface-muted-dark)] dark:text-[var(--ui-text-secondary-dark)]">
+            <div className="sketch-chip !min-h-0 px-3 py-1 text-xs font-semibold">
               {selectedSummary ? `${selectedSummary.count} 条记录` : '暂无记录'}
             </div>
           </div>
 
           {selectedSummary && (
-            <div className="mb-4 rounded-[20px] bg-[var(--ui-surface-muted-light)]/78 px-4 py-3 dark:bg-[var(--ui-surface-muted-dark)]/80">
+            <div className="mb-4 sketch-note px-4 py-3">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <div className="text-[11px] font-semibold text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">当天主色</div>
@@ -347,7 +350,7 @@ export const CalendarView: React.FC = () => {
             </div>
           ) : dayEntries.length === 0 ? (
             <div className="ui-empty-state">
-              <div className="mb-3 flex size-11 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <div className="mb-3 flex size-11 items-center justify-center rounded-[12px] border-2 border-dashed border-[var(--ui-border-subtle-light)] bg-[var(--ui-surface-card-light)] text-primary shadow-[2px_2px_0_rgba(44,44,44,0.08)] dark:border-[var(--ui-border-subtle-dark)] dark:bg-[var(--ui-surface-card-dark)]">
                 <Icon name="calendar_month" size={22} />
               </div>
               <p className="text-sm font-semibold">这一天还没有留下记录</p>
@@ -362,7 +365,8 @@ export const CalendarView: React.FC = () => {
                 return (
                   <article
                     key={entry.id}
-                    className="cursor-pointer rounded-[20px] border border-[var(--ui-border-subtle-light)] bg-white/60 p-4 transition-transform hover:-translate-y-0.5 dark:border-[var(--ui-border-subtle-dark)] dark:bg-white/5"
+                    className="ui-card cursor-pointer p-4"
+                    style={{ transform: `rotate(${Number(entry.id) % 2 === 0 ? '-0.5deg' : '0.45deg'})` }}
                     onClick={() => navigate(`/entry/${entry.id}`)}
                   >
                     <div className="mb-2 flex items-center justify-between gap-3">

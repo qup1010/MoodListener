@@ -185,6 +185,97 @@ const renderSticker = (mood: MoodLevelMeta) => {
   </>;
 };
 
+const renderColoredPencilSticker = (mood: MoodLevelMeta) => {
+  const stroke = mood.displayColor;
+  const pencil = mood.color;
+  return <>
+    <path d="M14 11c3-2 8-3 18-3 13 0 18 2.5 20.5 5.5S56 20 56 32c0 10.5-2 16.7-5.3 20S42.5 56 32 56c-10.5 0-15.9-1.1-19.6-4.1C8.7 48.9 8 42.4 8 32c0-9.7 1-17.3 6-21Z" fill="white" opacity="0.96" />
+    <path d="M16 14c2.7-1.7 7.1-2.6 16-2.6 11.7 0 16 2.2 18.3 4.9 2.3 2.7 3.7 7.3 3.7 15.7 0 9.2-1.7 14.6-4.6 17.2-2.8 2.7-7.7 3.9-17.4 3.9-9.5 0-14.4-1.1-17.6-3.7-3.1-2.5-4.4-7.7-4.4-17.4 0-8.6 1-15.1 5.9-18Z" fill={mood.surfaceColor} />
+    <path d="M17 14.5c2.8-1.9 7.3-2.8 15-2.8 9 0 15.1 1.1 18 4.2" stroke={stroke} strokeOpacity="0.22" strokeWidth="2" strokeLinecap="round" strokeDasharray="2.4 3.2" />
+    <path d="M18 19c2.4-3 5.1-4.4 8.1-4.4 2.7 0 5 1 7.1 3" stroke={pencil} strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" fill="none" opacity="0.92" />
+    <path d="M38 17.8c2.2-2.2 4.8-3.2 7.6-3.2 2.3 0 4.5 0.8 6.4 2.4" stroke={pencil} strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" fill="none" opacity="0.92" />
+    <circle cx="21" cy="35" r="3.8" fill={mood.softColor} opacity="0.8" />
+    <circle cx="43" cy="35" r="3.8" fill={mood.softColor} opacity="0.8" />
+    {mood.iconKey === 'ecstatic' && <>
+      <path d="M18 25c2.3 3 4.6 4.5 7 4.5 2.5 0 4.8-1.5 7-4.5" stroke={stroke} {...softStrokeProps} />
+      <path d="M32 25c2.3 3 4.7 4.5 7.1 4.5 2.4 0 4.7-1.5 6.9-4.5" stroke={stroke} {...softStrokeProps} />
+      <path d="M19.5 38c3.1 4 7.3 6 12.5 6 5.2 0 9.4-2 12.5-6" stroke={stroke} {...softStrokeProps} />
+      <path d="M22 39.5c2.6 2.5 6 3.7 10 3.7 4 0 7.4-1.2 10-3.7" stroke={pencil} strokeWidth="1.9" strokeLinecap="round" fill="none" opacity="0.7" />
+    </>}
+    {mood.iconKey === 'happy' && <>
+      <ellipse cx="23" cy="28" rx="3.4" ry="4" fill="white" opacity="0.95" />
+      <ellipse cx="41" cy="28" rx="3.4" ry="4" fill="white" opacity="0.95" />
+      <circle cx="23" cy="29" r="2" fill={stroke} />
+      <circle cx="41" cy="29" r="2" fill={stroke} />
+      <path d="M21 39c2.8 2.9 6.5 4.4 11 4.4 4.6 0 8.3-1.5 11-4.4" stroke={stroke} {...softStrokeProps} />
+    </>}
+    {mood.iconKey === 'okay' && <>
+      <ellipse cx="23" cy="28" rx="2.8" ry="3.5" fill={stroke} opacity="0.92" />
+      <ellipse cx="41" cy="28" rx="2.8" ry="3.5" fill={stroke} opacity="0.92" />
+      <path d="M23.5 40h17" stroke={stroke} {...softStrokeProps} />
+      <path d="M24 43c2.3-0.9 5-1.3 8-1.3 2.9 0 5.6 0.4 8 1.3" stroke={pencil} strokeWidth="1.8" strokeLinecap="round" fill="none" opacity="0.62" />
+    </>}
+    {mood.iconKey === 'upset' && <>
+      <path d="M18.5 24.5 26 21.5" stroke={stroke} {...softStrokeProps} />
+      <path d="M38 21.5 45.5 24.5" stroke={stroke} {...softStrokeProps} />
+      <ellipse cx="23" cy="30" rx="3" ry="3.8" fill="white" opacity="0.95" />
+      <ellipse cx="41" cy="30" rx="3" ry="3.8" fill="white" opacity="0.95" />
+      <circle cx="23" cy="31" r="1.8" fill={stroke} />
+      <circle cx="41" cy="31" r="1.8" fill={stroke} />
+      <path d="M22.5 42c2.8-2.5 5.9-3.8 9.5-3.8 3.7 0 6.8 1.3 9.5 3.8" stroke={stroke} {...softStrokeProps} />
+    </>}
+    {mood.iconKey === 'awful' && <>
+      <path d="M20 23h7.6v12.8H20z" stroke={stroke} {...softStrokeProps} />
+      <path d="M36.4 23H44v12.8h-7.6z" stroke={stroke} {...softStrokeProps} />
+      <path d="M23 43c2.5-2.2 5.5-3.3 9-3.3s6.5 1.1 9 3.3" stroke={stroke} {...softStrokeProps} />
+      <path d="M19.5 39.5c1.2 1.6 2.5 2.8 4 3.6" stroke={pencil} strokeWidth="1.8" strokeLinecap="round" fill="none" opacity="0.58" />
+    </>}
+  </>;
+};
+
+const renderStamp = (mood: MoodLevelMeta) => {
+  const stroke = mood.displayColor;
+  const stampBg = mood.softColor;
+  return <>
+    <rect x="8" y="8" width="48" height="48" rx="14" fill={stampBg} opacity="0.28" />
+    <rect x="10" y="10" width="44" height="44" rx="12" stroke={stroke} strokeOpacity="0.35" strokeWidth="2.2" strokeDasharray="2.8 2.8" />
+    <path d="M14 18c4-3 10-4.5 18-4.5s14 1.5 18 4.5" stroke={stroke} strokeOpacity="0.18" strokeWidth="2" strokeLinecap="round" fill="none" />
+    {mood.iconKey === 'ecstatic' && <>
+      <path d="M18 25c2 2.5 4.4 3.8 7 3.8 2.6 0 4.9-1.3 7-3.8" stroke={stroke} {...thinStrokeProps} />
+      <path d="M32 25c2 2.5 4.4 3.8 7 3.8 2.6 0 5-1.3 7-3.8" stroke={stroke} {...thinStrokeProps} />
+      <path d="M20 39c3.1 3.3 7.1 5 12 5 5 0 9-1.7 12-5" stroke={stroke} {...thinStrokeProps} />
+      <path d="M25 40.5h14" stroke={stroke} {...thinStrokeProps} />
+    </>}
+    {mood.iconKey === 'happy' && <>
+      <path d="M20 26h6" stroke={stroke} {...thinStrokeProps} />
+      <path d="M38 26h6" stroke={stroke} {...thinStrokeProps} />
+      <circle cx="23" cy="30" r="1.7" fill={stroke} />
+      <circle cx="41" cy="30" r="1.7" fill={stroke} />
+      <path d="M22 40c2.8 2.2 6.1 3.3 10 3.3 3.9 0 7.2-1.1 10-3.3" stroke={stroke} {...thinStrokeProps} />
+    </>}
+    {mood.iconKey === 'okay' && <>
+      <path d="M20 28h6" stroke={stroke} {...thinStrokeProps} />
+      <path d="M38 28h6" stroke={stroke} {...thinStrokeProps} />
+      <path d="M24 40h16" stroke={stroke} {...thinStrokeProps} />
+      <circle cx="32" cy="33" r="1.4" fill={stroke} />
+    </>}
+    {mood.iconKey === 'upset' && <>
+      <path d="M18.5 24.5 26 22" stroke={stroke} {...thinStrokeProps} />
+      <path d="M38 22 45.5 24.5" stroke={stroke} {...thinStrokeProps} />
+      <path d="M20 31c1.5-1.1 3.1-1.7 5-1.7 1.9 0 3.5 0.6 5 1.7" stroke={stroke} {...thinStrokeProps} />
+      <path d="M34 31c1.5-1.1 3.1-1.7 5-1.7 1.9 0 3.5 0.6 5 1.7" stroke={stroke} {...thinStrokeProps} />
+      <path d="M23 42c2.6-1.8 5.6-2.7 9-2.7 3.5 0 6.5 0.9 9 2.7" stroke={stroke} {...thinStrokeProps} />
+    </>}
+    {mood.iconKey === 'awful' && <>
+      <path d="M19 24 27 21" stroke={stroke} {...thinStrokeProps} />
+      <path d="M37 21 45 24" stroke={stroke} {...thinStrokeProps} />
+      <path d="M21 31h6" stroke={stroke} {...thinStrokeProps} />
+      <path d="M37 31h6" stroke={stroke} {...thinStrokeProps} />
+      <path d="M22.5 43c2.4-2 5.6-3 9.5-3 3.9 0 7.1 1 9.5 3" stroke={stroke} {...thinStrokeProps} />
+    </>}
+  </>;
+};
+
 const animeStrokeProps = {
   ...baseStrokeProps,
   strokeWidth: 2.2
@@ -472,6 +563,8 @@ const renderers: Record<MoodIconPackId, (mood: MoodLevelMeta) => React.ReactNode
   pebble: renderPebble,
   minimal: renderMinimal,
   sticker: renderSticker,
+  coloredPencilSticker: renderColoredPencilSticker,
+  stamp: renderStamp,
   pixel: renderPixel,
   clay: renderClay,
   solid: renderSolid,

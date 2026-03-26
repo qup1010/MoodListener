@@ -6,7 +6,7 @@ import { initTheme, syncThemeFromSettings } from './theme';
 import { FeedbackProvider, confirmAction, dismissTopOverlay } from './src/ui/feedback';
 import { fetchSettings } from './services';
 import { APP_LOCK_MIN_LENGTH, hashAppLockPassword, normalizeAppLockPassword } from './src/utils/appLock';
-import { refreshNotifications } from './src/services/notifications';
+import { refreshNotificationsIfAuthorized } from './src/services/notifications';
 
 const Home = lazy(() => import('./pages/Home').then((m) => ({ default: m.Home })));
 const RecordMood = lazy(() => import('./pages/RecordMood').then((m) => ({ default: m.RecordMood })));
@@ -214,6 +214,12 @@ const App: React.FC = () => {
     let appStateCleanup: (() => void) | undefined;
     let disposed = false;
 
+    const refreshNotificationsSilently = () => {
+      void refreshNotificationsIfAuthorized().catch((error) => {
+        console.error('Notification refresh failed:', error);
+      });
+    };
+
     const setupNotifications = async () => {
       if (!Capacitor.isNativePlatform()) return;
 
@@ -254,7 +260,7 @@ const App: React.FC = () => {
 
             lockImmediately();
             void refreshLockState(true);
-            void refreshNotifications();
+            refreshNotificationsSilently();
           });
 
           const pauseListener = await CapacitorApp.addListener('pause', () => {
@@ -297,6 +303,7 @@ const App: React.FC = () => {
 
     void setupNotifications();
     void setupAppLockLifecycle();
+    refreshNotificationsSilently();
 
     return () => {
       disposed = true;

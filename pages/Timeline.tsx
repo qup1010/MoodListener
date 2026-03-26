@@ -2,6 +2,7 @@
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '../components/Icon';
 import { MoodFaceIcon } from '../components/MoodFaceIcon';
+import { PageHeader } from '../components/PageHeader';
 import { deleteEntryV2, fetchEntriesV2, searchEntriesV2 } from '../services';
 import { EntryV2, MoodScore } from '../types';
 import { getMoodMeta, softenMoodColor } from '../src/constants/moodV2';
@@ -123,22 +124,22 @@ export const Timeline: React.FC = () => {
 
   return (
     <div className="page-shell flex min-h-screen flex-col animate-in fade-in slide-in-from-bottom-2">
-      <header className="page-header px-5 pt-4 pb-4">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="page-subtitle">{entries.length} 条记录 · {filterText}</p>
-          </div>
+      <PageHeader
+        className="px-5 pb-4 pt-4"
+        title="情绪时间线"
+        subtitle={`${entries.length} 条记录 · ${filterText}`}
+        trailing={(
           <button
             onClick={() => navigate('/calendar')}
-            className="flex size-11 items-center justify-center rounded-full border border-[var(--ui-border-subtle-light)] bg-white/65 dark:border-[var(--ui-border-subtle-dark)] dark:bg-white/5"
+            className="sketch-icon-button flex size-11 items-center justify-center"
           >
-            <Icon name="calendar_month" className="text-primary" />
+            <Icon name="calendar_month" className="text-[var(--ui-brand-primary-strong)] dark:text-[var(--ui-brand-primary)]" />
           </button>
-        </div>
-
+        )}
+      >
         {!hideTools && (
-          <div className="mt-4 flex flex-col gap-3 animate-in fade-in slide-in-from-top-2">
-            <div className="ui-input-shell flex items-center gap-2 px-4">
+          <div className="flex flex-col gap-3 animate-in fade-in slide-in-from-top-2">
+            <div className="ui-input-shell ui-input-shell--scrapbook flex items-center gap-2 px-4">
               <Icon name="search" className="text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]" size={20} />
               <input
                 type="text"
@@ -166,7 +167,7 @@ export const Timeline: React.FC = () => {
                   <button
                     key={item.label}
                     onClick={() => setFilterMood(item.value)}
-                    className={`whitespace-nowrap rounded-full border px-3 py-2 text-xs font-semibold ${active ? 'border-white/80 bg-white text-[var(--ui-text-primary-light)] shadow-sm' : 'border-[var(--ui-border-subtle-light)] bg-white/58 text-[var(--ui-text-secondary-light)] dark:border-[var(--ui-border-subtle-dark)] dark:bg-white/5 dark:text-[var(--ui-text-secondary-dark)]'}`}
+                    className={`sketch-chip ${active ? 'sketch-chip--active' : 'sketch-chip--stamp'}`}
                   >
                     {item.label}
                   </button>
@@ -175,7 +176,7 @@ export const Timeline: React.FC = () => {
             </div>
           </div>
         )}
-      </header>
+      </PageHeader>
 
       <main className="page-content flex-1 overflow-y-auto pb-6">
         {loading || searching ? (
@@ -207,7 +208,8 @@ export const Timeline: React.FC = () => {
               return (
                 <article
                   key={entry.id}
-                  className="ui-card ui-card--subtle cursor-pointer p-4"
+                  className="ui-card ui-card--subtle ui-card--scrapbook ui-card--note cursor-pointer p-4"
+                  style={{ transform: `rotate(${Number(entry.id) % 2 === 0 ? '-0.7deg' : '0.6deg'})` }}
                   onClick={() => navigate(`/entry/${entry.id}`)}
                 >
                   <div className="flex items-start gap-4">
@@ -216,7 +218,7 @@ export const Timeline: React.FC = () => {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <div className="text-sm font-semibold text-[var(--ui-text-secondary-light)] dark:text-[var(--ui-text-secondary-dark)]">
+                          <div className="scrapbook-meta">
                             {dateLabel}
                           </div>
                           <div className="mt-1 flex items-end gap-3">
@@ -231,7 +233,7 @@ export const Timeline: React.FC = () => {
 
                         <button
                           onClick={(event) => void handleDelete(event, Number(entry.id))}
-                          className="flex size-9 shrink-0 items-center justify-center rounded-full border border-[var(--ui-border-subtle-light)] bg-white/58 text-[var(--ui-text-secondary-light)] transition-colors hover:text-red-500 dark:border-[var(--ui-border-subtle-dark)] dark:bg-white/5 dark:text-[var(--ui-text-secondary-dark)]"
+                          className="sketch-icon-button flex size-9 shrink-0 items-center justify-center text-[var(--ui-text-secondary-light)] hover:text-rose-600 dark:text-[var(--ui-text-secondary-dark)]"
                           aria-label="删除"
                         >
                           <Icon name="more_horiz" size={18} />
@@ -245,7 +247,7 @@ export const Timeline: React.FC = () => {
                       )}
 
                       {preview && (
-                        <p className="mt-3 text-[1.02rem] leading-7 text-[var(--ui-text-primary-light)] line-clamp-2 dark:text-[var(--ui-text-primary-dark)]">
+                        <p className="sketch-note sketch-note--paper mt-3 px-3 py-2 text-[1.02rem] leading-7 text-[var(--ui-text-primary-light)] line-clamp-2 dark:text-[var(--ui-text-primary-dark)]">
                           {preview}
                         </p>
                       )}

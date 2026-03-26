@@ -35,7 +35,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const chromeConfig = resolvePageChromeConfig(location.pathname);
-  const contentPaddingClass = chromeConfig.showFab ? 'pb-40' : chromeConfig.showTab ? 'pb-28' : 'pb-0';
+  const contentPaddingClass = chromeConfig.showFab ? 'pb-44' : chromeConfig.showTab ? 'pb-32' : 'pb-0';
 
   const isNavActive = (path: string, aliases?: readonly string[]) => {
     if (location.pathname === path) return true;
@@ -56,11 +56,11 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
       {chromeConfig.showFab && chromeConfig.fabAction === 'record' && (
         <button
-          aria-label="\u5feb\u901f\u8bb0\u5f55"
-          className="fixed right-5 z-40 flex size-14 items-center justify-center rounded-full border border-black/10 text-white shadow-[0_18px_28px_-18px_rgba(194,148,62,0.85)] transition-transform hover:scale-105 active:scale-95 dark:border-white/10"
+          aria-label="快速记录"
+          className="sketch-icon-button bottom-tab-fab fixed right-5 z-40 flex size-14 items-center justify-center text-[var(--ui-text-primary-light)] dark:text-[var(--ui-text-primary-dark)]"
           style={{
-            bottom: 'calc(env(safe-area-inset-bottom) + 96px)',
-            background: 'linear-gradient(135deg, rgb(var(--app-primary)), color-mix(in srgb, rgb(var(--app-primary)) 70%, #8f6522 30%))'
+            bottom: 'calc(env(safe-area-inset-bottom) + 108px)',
+            transform: 'rotate(-3deg)'
           }}
           onClick={() => navigate('/record')}
         >
@@ -69,29 +69,36 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       )}
 
       {chromeConfig.showTab && (
-        <nav className="fixed bottom-0 z-30 w-full border-t border-[var(--ui-border-subtle-light)] bg-[color:var(--ui-surface-card-light)]/95 px-4 pb-safe pt-2 shadow-[0_-8px_32px_rgba(24,22,18,0.06)] backdrop-blur-md dark:border-[var(--ui-border-subtle-dark)] dark:bg-[color:var(--ui-surface-card-dark)]/94">
-          <div className="mx-auto grid h-16 max-w-md grid-cols-4 items-center">
-            {navItems.map((item) => {
-              const active = isNavActive(item.path, item.aliases);
-              return (
-                <button
-                  key={item.key}
-                  aria-label={item.label}
-                  className="group relative flex h-full flex-col items-center justify-center gap-1"
-                  onClick={() => void handleTabPress(item.path)}
-                >
-                  {active && <div className="absolute top-0 h-[3.5px] w-11 rounded-full bg-primary" />}
-                  <Icon
-                    name={item.icon}
-                    fill={active}
-                    className={`transition-colors ${active ? 'text-primary' : 'text-[var(--ui-text-secondary-light)] group-hover:text-primary dark:text-[var(--ui-text-secondary-dark)]'}`}
-                  />
-                  <span className={`text-[10px] font-semibold transition-colors ${active ? 'text-primary' : 'text-[var(--ui-text-secondary-light)] group-hover:text-primary dark:text-[var(--ui-text-secondary-dark)]'}`}>
-                    {item.label}
-                  </span>
-                </button>
-              );
-            })}
+        <nav className="bottom-tab-shell fixed bottom-0 z-30 w-full px-4 pb-safe pt-2.5">
+          <div className="bottom-tab-tray mx-auto max-w-md px-2.5 pb-1.5 pt-3">
+            <div className="grid grid-cols-4 items-end gap-1.5">
+              {navItems.map((item, index) => {
+                const active = isNavActive(item.path, item.aliases);
+                const tilt = active ? (index % 2 === 0 ? '-1.4deg' : '1deg') : (index % 2 === 0 ? '-0.55deg' : '0.45deg');
+                return (
+                  <button
+                    key={item.key}
+                    aria-label={item.label}
+                    className="group relative flex h-full items-end"
+                    onClick={() => void handleTabPress(item.path)}
+                  >
+                    <div
+                      className={`bottom-tab-label ${active ? 'bottom-tab-label--active' : ''}`}
+                      style={{ transform: `rotate(${tilt})` }}
+                    >
+                      <Icon
+                        name={item.icon}
+                        fill={active}
+                        className={`transition-colors ${active ? 'text-[var(--ui-text-primary-light)] dark:text-[var(--ui-text-primary-dark)]' : 'text-[var(--ui-text-secondary-light)] group-hover:text-[var(--ui-text-primary-light)] dark:text-[var(--ui-text-secondary-dark)] dark:group-hover:text-[var(--ui-text-primary-dark)]'}`}
+                      />
+                      <span className={`text-[10px] font-semibold transition-colors ${active ? 'text-[var(--ui-text-primary-light)] dark:text-[var(--ui-text-primary-dark)]' : 'text-[var(--ui-text-secondary-light)] group-hover:text-[var(--ui-text-primary-light)] dark:text-[var(--ui-text-secondary-dark)] dark:group-hover:text-[var(--ui-text-primary-dark)]'}`}>
+                        {item.label}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </nav>
       )}
