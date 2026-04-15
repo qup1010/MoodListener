@@ -1,6 +1,7 @@
 import { Capacitor } from '@capacitor/core';
 import { Reminder, fetchEntriesV2, fetchSettings } from '../../services';
 import { getIntelligentMessage } from '../constants/notificationMessages';
+import { createLocalNotificationClient, type LocalNotificationClient } from './localNotificationClient';
 import { toLocalDateString } from '../utils/date';
 
 const CHANNEL_ID = 'mood_reminders';
@@ -42,17 +43,22 @@ const getRecentMoodAverage = async (): Promise<number | null> => {
   return Number(avg.toFixed(2));
 };
 
-const ensurePermissionAndChannel = async (requestPermission = true) => {
+const getLocalNotificationClient = async (): Promise<LocalNotificationClient> => {
   const { LocalNotifications } = await import('@capacitor/local-notifications');
-  const permission = await withTimeout(LocalNotifications.checkPermissions(), 'checkPermissions');
+  return createLocalNotificationClient(LocalNotifications as unknown as LocalNotificationClient);
+};
+
+const ensurePermissionAndChannel = async (requestPermission = true) => {
+  const client = await getLocalNotificationClient();
+  const permission = await withTimeout(client.checkPermissions(), 'checkPermissions');
   if (permission.display !== 'granted') {
     if (!requestPermission) return null;
-    const requested = await LocalNotifications.requestPermissions();
+    const requested = await withTimeout(client.requestPermissions(), 'requestPermissions');
     if (requested.display !== 'granted') return null;
   }
 
   try {
-    await withTimeout(LocalNotifications.createChannel({
+    await withTimeout(client.createChannel({
       id: CHANNEL_ID,
       name: '\u5fc3\u60c5\u63d0\u9192',
       description: '\u63d0\u9192\u4f60\u8bb0\u5f55\u5f53\u5929\u7684\u60c5\u7eea',
@@ -65,7 +71,7 @@ const ensurePermissionAndChannel = async (requestPermission = true) => {
     // ignore channel exists or native no-op
   }
 
-  return LocalNotifications;
+  return client;
 };
 
 export const scheduleIntelligentNotifications = async (
@@ -150,15 +156,15 @@ export const scheduleNotificationsInBackground = (
 
 export const cancelTodayRemainingNotifications = async () => {
   if (!isNative) return 0;
-  const { LocalNotifications } = await import('@capacitor/local-notifications');
-  const pending = await withTimeout(LocalNotifications.getPending(), 'getPending');
+  const client = await getLocalNotificationClient();
+  const pending = await withTimeout(client.getPending(), 'getPending');
   const today = toLocalDateString(new Date());
   const todayNotifications = pending.notifications.filter((item: any) => item.extra?.scheduleDate === today);
 
   if (!todayNotifications.length) return 0;
 
   await withTimeout(
-    LocalNotifications.cancel({ notifications: todayNotifications.map((item) => ({ id: item.id })) }),
+    client.cancel({ notifications: todayNotifications.map((item) => ({ id: item.id })) }),
     'cancelTodayNotifications'
   );
   return todayNotifications.length;
