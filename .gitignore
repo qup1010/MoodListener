@@ -54,6 +54,7 @@ __pycache__/
 *.tmp
 *.temp
 *.bak
+.spec-workflow/
 
 # OS generated files
 Thumbs.db
